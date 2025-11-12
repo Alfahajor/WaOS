@@ -1,0 +1,53 @@
+name: "Reportar un Bug"
+description: "Crear un reporte para ayudarnos a mejorar el simulador."
+title: "[Bug] <Título conciso del bug>"
+labels: ["Bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Descripción del Bug"
+      description: "Una descripción clara y concisa de cuál es el problema."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: "Pasos para Reproducir"
+      description: "Describe los pasos exactos para reproducir el comportamiento anómalo."
+      placeholder: |
+        1. Cargar el archivo 'procesos_caso_borde.txt'.
+        2. Seleccionar el algoritmo de planificación 'SJF'.
+        3. Hacer clic en 'Iniciar Simulación'.
+        4. Observar el diagrama de Gantt en el segundo 5.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: "Comportamiento Esperado"
+      description: "Describe lo que debería haber sucedido."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: "Comportamiento Actual"
+      description: "Describe lo que sucedió en realidad, incluyendo capturas de pantalla si es posible."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Prioridad"
+      options:
+        - "Critical"
+        - "High"
+        - "Medium"
+        - "Low"
+    validations:
+      required: true

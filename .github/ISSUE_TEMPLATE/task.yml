@@ -1,0 +1,45 @@
+name: "New Task"
+description: "Crear una tarea técnica asociada a una User Story existente."
+title: "[Task] <Descripción técnica de la tarea>"
+labels: ["Task"]
+body:
+  - type: input
+    id: user-story-link
+    attributes:
+      label: "User Story Asociada"
+      description: "Indica el número del issue de la User Story a la que pertenece esta tarea (ej. #12)."
+      placeholder: "#<número_de_issue>"
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-description
+    attributes:
+      label: "Descripción Técnica"
+      description: "Describe qué se debe implementar, qué archivos se verán afectados y cualquier consideración técnica relevante."
+      placeholder: "Implementar la clase `Parser` en `src/core/Parser.cpp`. Debe tener un método `parseFile(const std::string& path)` que devuelva `std::vector<ProcessInfo>`."
+    validations:
+      required: true
+
+  - type: textarea
+    id: sub-tasks
+    attributes:
+      label: "Sub-tareas / Checklist de Implementación"
+      description: "Desglosa la tarea en pasos más pequeños para facilitar el seguimiento."
+      value: |
+        - [ ] Crear el archivo `Parser.h` con la declaración de la clase.
+        - [ ] Implementar la lógica de lectura de archivo en `Parser.cpp`.
+        - [ ] Añadir manejo de errores para formatos de línea incorrectos.
+        - [ ] Escribir una prueba unitaria básica para el parser.
+
+  - type: textarea
+    id: definition-of-done
+    attributes:
+      label: "Definición de Terminado (Definition of Done - DoD)"
+      description: "Criterios objetivos que deben cumplirse para que esta tarea se considere finalizada."
+      value: |
+        - [ ] El código está implementado y sigue la guía de estilo.
+        - [ ] El código compila sin errores ni warnings.
+        - [ ] Las pruebas unitarias asociadas han sido creadas/actualizadas y pasan.
+        - [ ] El código ha sido revisado y aprobado en un Pull Request.
+        - [ ] La documentación en el código (comentarios) ha sido actualizada.

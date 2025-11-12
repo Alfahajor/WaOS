@@ -1,0 +1,61 @@
+name: "New User Story"
+description: "Crear una nueva historia de usuario o épica para el Product Backlog."
+title: "[US] <Breve descripción de la historia>"
+labels: ["User Story"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Una User Story representa un requisito del producto desde la perspectiva del usuario final o de un actor del sistema. Debe entregar valor tangible.
+
+  - type: textarea
+    id: user-story-description
+    attributes:
+      label: "Descripción de la User Story"
+      description: "Sigue el formato: **Como** [tipo de usuario], **quiero** [realizar una acción], **para** [obtener un beneficio]."
+      placeholder: "Ej: Como desarrollador, quiero que el simulador cargue procesos desde un archivo, para poder probar diferentes escenarios de planificación."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: "Criterios de Aceptación"
+      description: "Define las condiciones que deben cumplirse para que esta historia se considere completa. Usa un formato de checklist."
+      placeholder: |
+        - [ ] El sistema acepta un archivo .txt con el formato especificado.
+        - [ ] Se crea un objeto `Process` por cada línea válida en el archivo.
+        - [ ] El sistema ignora las líneas con formato incorrecto y registra un warning.
+        - [ ] Los procesos creados se almacenan en la cola de 'Nuevos'.
+    validations:
+      required: true
+
+  - type: textarea
+    id: associated-tasks
+    attributes:
+      label: "Tareas Asociadas (Tasks)"
+      description: "Lista las tareas técnicas necesarias para completar esta historia. Una vez creadas, enlaza los issues aquí (ej. #15, #16)."
+      placeholder: |
+        - Implementar el parser de archivos.
+        - Crear la clase `Process`.
+        - Definir la cola de 'Nuevos'.
+        - ...
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Prioridad"
+      description: "Selecciona la prioridad de esta historia para el sprint planning."
+      options:
+        - "Must-Have"
+        - "Should-Have"
+        - "Could-Have"
+    validations:
+      required: true
+
+  - type: input
+    id: estimation
+    attributes:
+      label: "Estimación (Story Points)"
+      description: "Estima la complejidad de la historia usando la secuencia de Fibonacci (1, 2, 3, 5, 8, 13)."
+      placeholder: "Ej: 5"
