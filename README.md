@@ -1,33 +1,79 @@
-# Roles
+# <samp>WaOS Simulator</samp>
 
-## Integrador de GUI 
+**Simulador Integrado de Planificación de Procesos y Gestión de 
+Memoria Virtual**
 
-**Encargado:** *Jhonatan David Arias Quispe* 
- 
-Se encarga de consumir toda la lógica del negocio. Evidencia
-la planificación de procesos y gestión de memoria (si es posible
-en tiempo real)
+Este proyecto es un simulador educativo desarrollado en C++ y Qt6 que
+modela el comportamiento de un sistema operativo simplificado. Integra
+dos módulos clave: un planificador de CPU y un gestor de memoria
+virtual.
 
-## Diseño de la Arquitectura del sistema WaOs
+## Módulos Principales
 
-**Encargado:** *Jorge Luis Mamani Huarsaya* 
+-   **Core:** La biblioteca central que orquesta la simulación,
+    gestiona el tiempo, los procesos y la comunicación entre módulos.
+-   **Scheduler:** Implementa diversos algoritmos de planificación de
+    CPU (FCFS, SJF, Round Robin).
+-   **Memory Manager:** Implementa algoritmos de reemplazo de páginas
+    (FIFO, LRU, Óptimo).
+-   **UI:** La interfaz gráfica de usuario construida con Qt6 para
+    visualizar la simulación en tiempo real.
 
-Se encarga de definir el nucle del sistema (las clases que conectan
-las dos funcionalidades). Por ejemplo: define la clase que abstrae
-el Schedule (esta clase solo usa el **módulo Schedule**), etc.
+### Estructura de directorios y archivos
 
-Planifica la comunicación entre los dos módulos (ver abajo) usando
-hilos y tomando en cuenta el formato de entrada para las simulaciones.
+La estructura se divide en los módulos descritos anteriormente
 
-## Desarrollador de Planificación de CPU
+```sh
+WaOS/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   └── workflows/
+├── .gitignore
+├── CMakeLists.txt
+├── README.md
+├── core/
+├── docs/
+├── include/
+│   └── waos/
+│       ├── core/
+│       ├── memory/
+│       └── scheduler/
+├── src/
+│   ├── core/
+│   ├── memory/
+│   ├── scheduler/
+│   ├── ui/
+│   └── main.cpp
+└── tests/
+    └── core/
+```
 
-**Encargado:** *David Alfredo Huamani Ollachica* 
+## Requisitos de Compilación
 
-Se encarga de implementar los algoritmos que componen este módulo
+-   CMake 3.16+
+-   Compilador C++17 (GCC, Clang, MSVC)
+-   Qt 6.2+
 
-## Desarrollador de Gestión de la memoria virtual
+## Instrucciones de Compilación
 
-**Encargado:** *Rafael Diego Nina Calizaya* 
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone <URL_DEL_REPOSITORIO>
+    cd WaOS/
+    ```
 
-Se encarga de implementar los algoritmos que componen este módulo
+2.  **Configurar con CMake:**
+    ```bash
+    cmake -B build
+    ```
 
+3.  **Compilar el proyecto:**
+    ```bash
+    cmake --build build
+    ```
+
+4.  **Ejecutar el simulador:**
+    ```bash
+    ./build/simulator
+    ```
