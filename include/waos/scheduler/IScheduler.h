@@ -1,42 +1,53 @@
-#ifndef WAOS_SCHEDULER_ISCHEDULER_H
-#define WAOS_SCHEDULER_ISCHEDULER_H
+#pragma once
+/**
+ * @file IScheduler.h
+ * @brief Abstract interface for CPU schedulers.
+ *
+ * This interface defines the contract that all scheduling algorithms
+ * must implement so the Simulator Core can operate with any scheduler.
+ */
 
-namespace waos {
-namespace core {
-    class Process;  // forward declaration
+namespace waos::core {
+    class Process; ///< forward declaration
 }
 
+namespace waos::scheduler {
+
 /**
- * @brief Base abstract interface for all CPU schedulers.
+ * @class IScheduler
+ * @brief Abstract base interface for process schedulers.
  *
- * All scheduling strategies (FCFS, SJF, RR, Priority) must derive
- * from this interface so the Simulator Core can swap them without
- * depending on specific implementations.
+ * Implementations must be thread-safe if used from multiple threads.
+ * The convention here is that getNextProcess() returns and removes the
+ * chosen process from the scheduler's internal structure (i.e., it consumes it).
  */
 class IScheduler {
 public:
     virtual ~IScheduler() = default;
 
     /**
-     * @brief Add a process to the scheduler's internal structure.
-     * Note: The scheduler does NOT take ownership of the pointer.
-     * @param p pointer to a valid Process object.
+     * @brief Enqueue a process into the scheduler.
+     *
+     * The scheduler does not take ownership of the pointer.
+     * Caller is responsible for process lifetime management.
+     *
+     * @param p Pointer to waos::core::Process (must be valid).
      */
     virtual void addProcess(waos::core::Process* p) = 0;
 
     /**
-     * @brief Retrieve and remove the next ready process.
-     * @return pointer to the selected process, or nullptr if none are available.
+     * @brief Select, remove and return the next process according to the policy.
+     *
+     * @return Pointer to the selected Process, or nullptr when none available.
      */
     virtual waos::core::Process* getNextProcess() = 0;
 
     /**
-     * @brief Check if the scheduler has ready processes.
+     * @brief Returns true when scheduler has one or more ready processes.
+     *
      * @return true if ready processes exist, false otherwise.
      */
     virtual bool hasReadyProcesses() const = 0;
 };
 
-} // namespace waos
-
-#endif // WAOS_SCHEDULER_ISCHEDULER_H
+} // namespace waos::scheduler
