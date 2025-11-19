@@ -39,3 +39,17 @@
 
 # debug information files
 *.dwo
+
+# Qt build directories
+*build/
+*build-*/
+*build-*/
+release/
+debug/
+.qtcreator/
+Makefile*
+*.pro.user
+*.pro.user.*
+*.qmake.stash
+*.qmake.cache
+
