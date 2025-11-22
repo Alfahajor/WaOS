@@ -1,15 +1,19 @@
+/**
+ * @brief Updated Interface with query capability.
+ * @version 0.2
+ */
+
 #pragma once
 
 #include <cstdint>
-#include <vector>
-
-namespace waos::core {
-    class Process; // forward declaration
-}
 
 namespace waos::memory {
 
-  struct Frame; // forward declaration
+  enum class PageRequestResult {
+    HIT,
+    PAGE_FAULT,
+    REPLACEMENT
+  };
 
   /**
    * @brief Abstract base interface for memory managers
@@ -24,17 +28,20 @@ namespace waos::memory {
     virtual ~IMemoryManager() = default;
 
     /**
-     * @brief Handle a page request from a process.
+     * @brief Checks if a specific page is currently loaded in a frame.
+     * This method is READ-ONLY and does not trigger replacement logic.
      *
-     * This is the main method called by the simulator when a process
-     * needs to access a page. If the page is not in memory, a page
-     * fault occurs and the algorithm must handle replacement if needed
-     *
-     * @param p Pointer to the Process making the request
-     * @param pageNumber The logical page number being requested
-     * @return true if page is in memory (or successfully loaded), false otherwise
+     * @param processId The PID.
+     * @param pageNumber The virtual page number.
+     * @return true if loaded, false otherwise.
      */
-    virtual bool handlePageRequest(waos::core::Process* p, int pageNumber) = 0;
+    virtual bool isPageLoaded(int processId, int pageNumber) const = 0;
+
+    /**
+     * @brief Handles a formal page request. Triggers load/replacement if needed.
+     * @return Result of the operation (HIT or FAULT).
+     */
+    virtual PageRequestResult requestPage(int processId, int pageNumber) = 0;
 
     /**
      * @brief Allocate memory structures for a new process.
@@ -42,34 +49,15 @@ namespace waos::memory {
      * Need to be used before the process can make page requests
      * Creates the page table and reserves necessary structures for
      * the process based on its required pages
-     *
-     * @param p Pointer to the Process to allocate
      */
-    virtual void allocateProcess(waos::core::Process* p) = 0;
+    virtual void allocateForProcess(int processId, int requiredPages) = 0;
 
     /**
      * @brief Deallocate memory structures for a terminated process
      *
      * Frees all frames used by the process and removes its page table
-     *
-     * @param pid The process ID to deallocate
      */
-    virtual void deallocateProcess(int pid) = 0;
-
-    /**
-     * @brief Get the total number of page faults since simulation start
-     */
-    virtual uint64_t getPageFaults() const = 0;
-
-    /**
-     * @brief Get the total number of page replacements since simulation start
-     */
-    virtual uint64_t getPageReplacements() const = 0;
-
-    /**
-     * @brief Get the number of free frames currently available
-     */
-    virtual int getFreeFrames() const = 0;
+    virtual void freeForProcess(int processId) = 0;
   };
 
 }
