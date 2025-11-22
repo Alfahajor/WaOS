@@ -60,7 +60,7 @@ El corazón temporal de la simulación. Mantiene el tiempo global en
 
 ---
 
-## :handshake: Guía de Integración
+## Guía de Integración
 
 A continuación se detalla cómo cada módulo debe interactuar con las
 estructuras del núcleo.
@@ -116,7 +116,7 @@ La UI debe ser un observador pasivo.
 
 ---
 
-## :zap: Flujo de Datos y Restricciones Técnicas
+## Flujo de Datos y Restricciones Técnicas
 
 1.  **Propiedad de los Datos:** La clase `Simulator` (a implementar)
     es la **dueña** (`std::unique_ptr`) de todos los procesos. Los
