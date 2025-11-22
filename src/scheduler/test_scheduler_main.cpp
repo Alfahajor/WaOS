@@ -47,6 +47,8 @@ int main() {
     // SJF test
     {
         waos::scheduler::SJFScheduler s;
+        s.addProcess(p1);
+        s.addProcess(p2);
         s.addProcess(p3);
         auto* p = s.getNextProcess();
         (void)p;
