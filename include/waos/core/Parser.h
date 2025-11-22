@@ -1,7 +1,7 @@
 /**
  * @brief Defines a utility for parsing process definition files.
  * @version 0.1
- * @date 10-20-2025
+ * @date 10-21-2025
  */
 
 #pragma once
@@ -11,6 +11,7 @@
 #include <queue>
 #include <cstdint>
 #include <optional>
+#include "waos/core/Process.h"
 
 namespace waos::core {
 
@@ -26,25 +27,17 @@ namespace waos::core {
     uint64_t arrivalTime;
     int priority;
     int requiredPages;
-    std::queue<int> cpuBursts;
+    std::queue<Burst> bursts;
   };
 
   /**
    * @class Parser
    * @brief A static utility class for parsing process files.
-   *
-   * This class provides functionality to read a text file formatted with
-   * process definitions and transform it into a collection of ProcessInfo
-   * objects.
    */
   class Parser {
   public:
     /**
      * @brief Parses a process definition file.
-     *
-     * Reads the specified file line by line, parsing each valid line into
-     * a ProcessInfo struct. Invalid lines are skipped, and a warning is
-     * printed to stderr.
      *
      * @param filePath The path to the process definition file.
      * @return A vector of ProcessInfo structs, one for each valid process.
