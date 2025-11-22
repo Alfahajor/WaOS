@@ -3,7 +3,7 @@
 
 namespace waos::core {
 
-  Process::Process(int pid, uint64_t arrivalTime, std::queue<int> bursts, int requiredPages)
+  Process::Process(int pid, uint64_t arrivalTime, std::queue<Burst> bursts, int requiredPages)
     : m_pid(pid),
       m_state(ProcessState::NEW),
       m_arrivalTime(arrivalTime),
@@ -48,7 +48,7 @@ namespace waos::core {
     }
   }
 
-  int Process::getCurrentBurstType() const {
+  BurstType Process::getCurrentBurstType() const {
     if (m_bursts.empty()) return BurstType::CPU;
     return m_bursts.front().type;
   }
