@@ -67,6 +67,13 @@ namespace waos::core {
      */
     void reset();
 
+    // public to facilitate step-by-step unit testing
+    void tick();
+
+    // Getters for validation in tests
+    uint64_t getCurrentTime() const;
+    bool isRunning() const;
+
   signals:
 
     /**
@@ -107,6 +114,9 @@ namespace waos::core {
     // Queue for processes blocked by I/O (The simulator manages I/O waits)
     std::vector<Process*> m_blockedQueue; 
 
+    // Process currently in CPU
+    Process* m_runningProcess;
+
     bool m_isRunning;
     mutable std::mutex m_simulationMutex; // For thread safety in future steps
 
@@ -114,6 +124,12 @@ namespace waos::core {
      * @brief The main logic step executed every tick.
      */
     void step();
+
+    // Helpers
+    void handleArrivals();
+    void handleIO();
+    void handleCpuExecution();
+    void handleScheduling();
   };
 
 }
