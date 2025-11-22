@@ -6,6 +6,7 @@
 
 #include "IScheduler.h"
 #include <queue>
+#include <mutex>
 
 namespace waos::core {
     class Process;
@@ -30,6 +31,7 @@ public:
 
 private:
     std::queue<waos::core::Process*> m_queue;
+    mutable std::mutex m_mutex;
 };
 
 } // namespace waos::scheduler
