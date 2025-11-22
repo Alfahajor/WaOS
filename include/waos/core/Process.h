@@ -1,7 +1,7 @@
 /**
  * @brief Defines the Process Control Block (PCB) data structure for the simulator.
  * @version 0.1
- * @date 11-11-2025
+ * @date 11-21-2025
  */
 
 #pragma once
@@ -25,6 +25,24 @@ namespace waos::core {
   };
 
   /**
+   * @enum BurstType
+   * @brief Distinguishes between CPU processing and I/O waiting.
+   */
+  enum class BurstType {
+    CPU,
+    IO
+  };
+
+  /**
+   * @struct Burst
+   * @brief Represents a single unit of work or wait.
+   */
+  struct Burst {
+    BurstType type;
+    int duration;
+  };
+
+  /**
    * @struct ProcessStats
    * @brief A container for collecting performance metrics for a single process.
    */
@@ -33,6 +51,7 @@ namespace waos::core {
     uint64_t finishTime = 0;     
     uint64_t totalWaitTime = 0;
     uint64_t totalCpuTime = 0;
+    uint64_t totalIoTime = 0;
     uint64_t lastReadyTime = 0;
   };
 
@@ -53,7 +72,7 @@ namespace waos::core {
      * @param cpuBursts A queue of CPU burst durations.
      * @param requiredPages The number of memory pages this process requires.
      */
-    Process(int pid, uint64_t arrivalTime, std::queue<int> cpuBursts, int requiredPages);
+    Process(int pid, uint64_t arrivalTime, std::queue<Burst> bursts, int requiredPages);
 
     int getPid() const;
     uint64_t getArrivalTime() const;
@@ -62,12 +81,32 @@ namespace waos::core {
     ProcessState getState() const;
     void setState(ProcessState newState, uint64_t currentTime);
 
-    int getCurrentCpuBurst() const;
+    /**
+     * @brief Gets the type of the current burst (CPU or IO).
+     */
+    BurstType getCurrentBurstType() const;
+
+    /**
+     * @brief Gets the remaining duration of the current burst.
+     */
+    int getCurrentBurstDuration() const;
+
+    /**
+     * @brief Consumes time from the current burst.
+     * @param timeUnits Amount of time to process.
+     * @return True if the burst is completed, false otherwise.
+     */
+    bool updateCurrentBurst(int timeUnits);
+
+    /**
+     * @brief Removes the current finished burst and moves to the next.
+     */
     void advanceToNextBurst();
     bool hasMoreBursts() const;
 
     const ProcessStats& getStats() const;
     void addCpuTime(uint64_t time);
+    void addIoTime(uint64_t time);
 
   private:
     int m_pid;
@@ -75,7 +114,7 @@ namespace waos::core {
 
     // Scheduling Information
     uint64_t m_arrivalTime;
-    std::queue<int> m_cpuBursts;
+    std::queue<Burst> m_bursts;
     
     // Memory Information
     int m_requiredPages;
