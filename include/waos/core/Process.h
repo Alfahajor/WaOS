@@ -1,6 +1,6 @@
 /**
  * @brief Defines the Process Control Block (PCB) data structure for the simulator.
- * @version 0.1
+ * @version 0.2
  * @date 11-21-2025
  */
 
@@ -21,6 +21,7 @@ namespace waos::core {
     READY,
     RUNNING,
     BLOCKED,
+    WAITING_MEMORY, // Only to GUI color
     TERMINATED
   };
 
@@ -53,6 +54,7 @@ namespace waos::core {
     uint64_t totalCpuTime = 0;
     uint64_t totalIoTime = 0;
     uint64_t lastReadyTime = 0;
+    int pageFaults = 0;
   };
 
   /**
@@ -104,9 +106,22 @@ namespace waos::core {
     void advanceToNextBurst();
     bool hasMoreBursts() const;
 
+    /**
+     * @brief Gets the page number the process needs to access in the current CPU tick.
+     * @return The virtual page number (0 to requiredPages - 1).
+     */
+    int getCurrentPageRequirement() const;
+
+    /**
+     * @brief Advances the instruction pointer to the next memory reference.
+     * Should be called after a successful CPU tick execution.
+     */
+    void advanceInstructionPointer();
+
     const ProcessStats& getStats() const;
     void addCpuTime(uint64_t time);
     void addIoTime(uint64_t time);
+    void incrementPageFaults();
 
   private:
     int m_pid;
@@ -120,6 +135,13 @@ namespace waos::core {
     int m_requiredPages;
 
     ProcessStats m_stats;
+
+    // Memory Simulation Internal Data
+    std::vector<int> m_pageReferenceString;
+    size_t m_instructionPointer;
+
+    // Generates a deterministic sequence of page references based on locality.
+    void generateReferenceString();
   };
 
 }
