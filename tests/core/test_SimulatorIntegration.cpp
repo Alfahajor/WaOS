@@ -58,10 +58,7 @@ public:
     return PageRequestResult::PAGE_FAULT;
   }
 
-  void allocateForProcess(int pid, int pages) override {
-    // Initialize pages as NOT loaded
-    for(int i=0; i<pages; ++i) memoryState[pid][i] = false;
-  }
+  void allocateForProcess(int pid, int pages) override { }
   
   void freeForProcess(int pid) override {
     memoryState.erase(pid);
@@ -169,7 +166,7 @@ void test_page_fault_flow() {
   // HOWEVER, our MockMemoryManager is dumb. We MUST manually force load the page
   // so the *next* check passes. But we don't know which page P1 wanted (random).
   // Strategy: Force load ALL pages for P1 now.
-  memPtr->forceLoadPage(1, 0);
+  for(int i=0; i<10; ++i) memPtr->forceLoadPage(1, i);
 
   // Tick 7: P1 moves from Wait to Ready.
   sim.tick();
