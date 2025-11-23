@@ -1,5 +1,6 @@
 #include "waos/core/Process.h"
 #include <stdexcept>
+#include <random>
 
 namespace waos::core {
 
@@ -122,5 +123,6 @@ namespace waos::core {
 
   void Process::addCpuTime(uint64_t time) { m_stats.totalCpuTime += time; }
   void Process::addIoTime(uint64_t time) { m_stats.totalIoTime += time; }
+  void Process::incrementPageFaults() { m_stats.pageFaults++; }
 
 }
