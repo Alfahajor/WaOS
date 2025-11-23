@@ -16,7 +16,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 # Agregamos el subdirectorio que contiene la lógica del núcleo.
 # Este subdirectorio tendrá su propio CMakeLists.txt.
 add_subdirectory(src/core)
-# add_subdirectory(src/scheduler)
+add_subdirectory(src/scheduler)
 # add_subdirectory(src/memory)
 
 # target_link_libraries(simulator PRIVATE

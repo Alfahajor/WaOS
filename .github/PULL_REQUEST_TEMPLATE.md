@@ -5,7 +5,6 @@ Describe de manera clara y concisa los cambios que se incluyen en este Pull Requ
 ¿Qué problema resuelve? ¿Qué nueva funcionalidad añade?
 -->
 
----
 
 ## Issue Asociado
 
@@ -16,7 +15,6 @@ para que GitHub cierre automáticamente el issue al fusionar el PR.
 
 Closes #<número_de_issue>
 
----
 
 ## Checklist de Revisión
 
@@ -38,9 +36,8 @@ Marca las casillas correspondientes con una 'x'.
     -   [ ] El proyecto compila sin errores ni warnings.
     -   [ ] El simulador se ejecuta correctamente con mis cambios.
 
----
 
-##  reviewers
+##  Reviewers
 
 <!--
 Menciona a los miembros del equipo que deben revisar este PR usando @<username>.
@@ -48,7 +45,6 @@ Menciona a los miembros del equipo que deben revisar este PR usando @<username>.
 
 cc @<username_revisor_1>, @<username_revisor_2>
 
----
 
 ## Capturas de Pantalla (si aplica)
 

@@ -9,28 +9,25 @@ void SJFScheduler::addProcess(waos::core::Process* p) {
     if (!p) return;
     std::lock_guard<std::mutex> lock(m_mutex);
     m_pool.push_back(p);
-    std::cout << "[SJF-stub] addProcess PID=" << p->getPid()
-              << " arrival=" << p->getArrivalTime() << "\n";
+    std::cout << "[SJF] addProcess PID=" << p->getPid()
+              << " burstDuration=" << p->getCurrentBurstDuration() << "\n";
 }
 
 waos::core::Process* SJFScheduler::getNextProcess() {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_pool.empty()) return nullptr;
     
-    //just for testing
-    //this will be replaced with actual SJF logic
+    // Find the process with the shortest CPU burst
+    auto it = std::min_element(m_pool.begin(), m_pool.end(),
+        [](waos::core::Process* a, waos::core::Process* b) {
+            return a->getCurrentBurstDuration() < b->getCurrentBurstDuration();
+        });
     
-    // Stub behaviour: pick first-inserted. In future: pick smallest getCurrentCpuBurst()
-    // Example future selection (commented):
-    // auto it = std::min_element(m_pool.begin(), m_pool.end(),
-    //     [](waos::core::Process* a, waos::core::Process* b){
-    //         return a->getCurrentCpuBurst() < b->getCurrentCpuBurst();
-    //     });
-    // waos::core::Process* p = *it; m_pool.erase(it);
-
-    waos::core::Process* p = m_pool.front();
-    m_pool.erase(m_pool.begin());
-    std::cout << "[SJF-stub] getNextProcess PID=" << p->getPid() << "\n";
+    waos::core::Process* p = *it;
+    m_pool.erase(it);
+    
+    std::cout << "[SJF] getNextProcess PID=" << p->getPid()
+              << " burstDuration=" << p->getCurrentBurstDuration() << "\n";
     return p;
 }
 

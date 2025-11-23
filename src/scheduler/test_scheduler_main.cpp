@@ -16,17 +16,17 @@
 int main() {
     std::cout << "=== Scheduler stubs integration test ===\n";
 
-    // Create small CPU burst queues for processes
-    std::queue<int> bursts1;
-    bursts1.push(5);
-    bursts1.push(3);
+    // Create CPU burst queues for processes using Burst structs
+    std::queue<waos::core::Burst> bursts1;
+    bursts1.push({waos::core::BurstType::CPU, 5});
+    bursts1.push({waos::core::BurstType::CPU, 3});
 
-    std::queue<int> bursts2;
-    bursts2.push(2);
+    std::queue<waos::core::Burst> bursts2;
+    bursts2.push({waos::core::BurstType::CPU, 2});
 
-    std::queue<int> bursts3;
-    bursts3.push(4);
-    bursts3.push(1);
+    std::queue<waos::core::Burst> bursts3;
+    bursts3.push({waos::core::BurstType::CPU, 4});
+    bursts3.push({waos::core::BurstType::CPU, 1});
 
     // Instantiating waos::core::Process per provided API:
     waos::core::Process* p1 = new waos::core::Process(1, /*arrivalTime*/ 0, bursts1, /*requiredPages*/ 4);
@@ -47,6 +47,8 @@ int main() {
     // SJF test
     {
         waos::scheduler::SJFScheduler s;
+        s.addProcess(p1);
+        s.addProcess(p2);
         s.addProcess(p3);
         auto* p = s.getNextProcess();
         (void)p;
