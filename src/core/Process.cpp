@@ -13,6 +13,8 @@ namespace waos::core {
       m_instructionPointer(0) {
     if (m_pid < 0) throw std::invalid_argument("Process ID cannot be negative.");
     if (m_requiredPages < 0) throw std::invalid_argument("Required pages cannot be negative.");
+
+    generateReferenceString();
   }
 
   int Process::getPid() const { return m_pid; }
