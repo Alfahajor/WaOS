@@ -51,13 +51,13 @@ namespace waos::core {
      * @brief Injects the specific scheduling algorithm to be used.
      * @param scheduler Ownership of a concrete IScheduler implementation.
      */
-    void setScheduler(std::unique_ptr<IScheduler> scheduler);
+    void setScheduler(std::unique_ptr<waos::scheduler::IScheduler> scheduler);
 
     /**
      * @brief Injects the specific memory management strategy to be used.
      * @param memoryManager Ownership of a concrete IMemoryManager implementation.
      */
-    void setMemoryManager(std::unique_ptr<IMemoryManager> memoryManager);
+    void setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> memoryManager);
 
     /**
      * @brief Starts the simulation loop. This might run in a separate thread
@@ -109,8 +109,8 @@ namespace waos::core {
 
   private:
     Clock m_clock;
-    std::unique_ptr<IScheduler> m_scheduler;
-    std::unique_ptr<IMemoryManager> m_memoryManager;
+    std::unique_ptr<waos::scheduler::IScheduler> m_scheduler;
+    std::unique_ptr<waos::memory::IMemoryManager> m_memoryManager;
 
     // The Simulator owns all processes.
     std::vector<std::unique_ptr<Process>> m_processes;
