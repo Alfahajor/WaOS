@@ -1,6 +1,6 @@
 /**
  * @brief Defines the main orchestration class for the OS simulation.
- * @version 0.1
+ * @version 0.2
  * @date 11-22-2025
  */
 
@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <list>
 
 #include "waos/core/Process.h"
 #include "waos/core/Clock.h"
@@ -17,6 +18,12 @@
 #include "waos/memory/IMemoryManager.h"
 
 namespace waos::core {
+
+  // Tracks a process waiting for a page to be loaded (Page Fault penalty).
+  struct MemoryWaitInfo {
+    Process* process;
+    int ticksRemaining; // Penalización restante
+  };
 
   /**
    * @class Simulator
@@ -114,11 +121,16 @@ namespace waos::core {
     // Queue for processes blocked by I/O (The simulator manages I/O waits)
     std::vector<Process*> m_blockedQueue; 
 
+    // Processes waiting for the disk to load a page
+    std::list<MemoryWaitInfo> m_memoryWaitQueue; 
+
     // Process currently in CPU
     Process* m_runningProcess;
-
     bool m_isRunning;
     mutable std::mutex m_simulationMutex; // For thread safety in future steps
+
+    // Penalty configuration
+    const int PAGE_FAULT_PENALTY = 5; 
 
     /**
      * @brief The main logic step executed every tick.
@@ -128,6 +140,7 @@ namespace waos::core {
     // Helpers
     void handleArrivals();
     void handleIO();
+    void handlePageFaults();
     void handleCpuExecution();
     void handleScheduling();
   };

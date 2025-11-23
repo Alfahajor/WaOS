@@ -7,6 +7,7 @@ namespace waos::core {
 
   Simulator::Simulator(QObject* parent)
     : QObject(parent),
+      m_runningProcess(nullptr),
       m_isRunning(false) {
   }
 
@@ -20,6 +21,7 @@ namespace waos::core {
       m_processes.clear();
       m_incomingProcesses.clear();
       m_blockedQueue.clear();
+      m_memoryWaitQueue.clear();
       m_runningProcess = nullptr;
 
       // Convert ProcessInfo (DTO) to Process (Entity)
@@ -88,6 +90,7 @@ namespace waos::core {
     stop();
     m_runningProcess = nullptr;
     m_blockedQueue.clear();
+    m_memoryWaitQueue.clear(); 
     // Reset logic will be refined here (reset clock, process states, etc.)
     // m_clock.reset(); 
     emit logMessage("Simulation reset.");
@@ -110,6 +113,7 @@ namespace waos::core {
 
     handleArrivals();
     handleIO();
+    handlePageFaults();
     handleCpuExecution();
     handleScheduling();
 
@@ -118,6 +122,7 @@ namespace waos::core {
     // Check for termination condition
     // Simplificado: si no hay procesos activos, parar
     if (m_incomingProcesses.empty() && m_blockedQueue.empty() && 
+      m_memoryWaitQueue.empty() &&
       m_runningProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
        // O verificar si todos los m_processes están TERMINATED
        bool allTerminated = true;
@@ -142,6 +147,9 @@ namespace waos::core {
     while (it != m_incomingProcesses.end()) {
       Process* p = *it;
       if (p->getArrivalTime() <= now) {
+        // Attempt to reserve initial structures
+        m_memoryManager->allocateForProcess(p->getPid(), p->getRequiredPages());
+
         // Move to READY (Scheduler se encarga de la cola)
         p->setState(ProcessState::READY, now);
         emit processStateChanged(p->getPid(), ProcessState::READY);
@@ -187,11 +195,39 @@ namespace waos::core {
     }
   }
 
+  void Simulator::handlePageFaults() {
+    auto it = m_memoryWaitQueue.begin();
+    while (it != m_memoryWaitQueue.end()) {
+      MemoryWaitInfo& info = *it;
+      
+      // Simular tiempo de disco para cargar la página
+      info.ticksRemaining--;
+      info.process->addIoTime(1); // Contamos espera de disco como IO Time
+
+      if (info.ticksRemaining <= 0) {
+        // La página ha sido "cargada" (simulado por el tiempo transcurrido)
+        // El MemoryManager ya hizo su lógica en requestPage(), aquí solo volvemos a Ready.
+        
+        info.process->setState(ProcessState::READY, m_clock.getTime());
+        emit processStateChanged(info.process->getPid(), ProcessState::READY);
+        m_scheduler->addProcess(info.process);
+        
+        emit logMessage(QString("Process P%1 resolved Page Fault.").arg(info.process->getPid()));
+        it = m_memoryWaitQueue.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
   void Simulator::handleCpuExecution() {
     if (m_runningProcess) {
       // Process "uses" the CPU
       bool burstFinished = m_runningProcess->updateCurrentBurst(1);
       m_runningProcess->addCpuTime(1);
+
+      // Advance Instruction Pointer
+      m_runningProcess->advanceInstructionPointer();
 
       if (burstFinished) {
         m_runningProcess->advanceToNextBurst();
@@ -222,18 +258,33 @@ namespace waos::core {
   }
 
   void Simulator::handleScheduling() {
-    // Solo intentamos programar si la CPU está libre
     if (m_runningProcess == nullptr) {
-      Process* next = m_scheduler->getNextProcess();
+      Process* candidate = m_scheduler->getNextProcess();
+      
+      if (candidate) {
+        int pageRequired = candidate->getCurrentPageRequirement();
 
-      if (next) {
-        // Faltan datos para la elección de la next page
+        if (m_memoryManager->isPageLoaded(candidate->getPid(), pageRequired)) {
+          m_runningProcess = candidate;
+          m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+          emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+        } else {
+          emit logMessage(QString("Page Fault: P%1 needs Page %2").arg(candidate->getPid()).arg(pageRequired));
+          
+          candidate->incrementPageFaults();
 
-        m_runningProcess = next;
-        m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-        emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-        emit logMessage(QString("Process P%1 dispatched to CPU.").arg(m_runningProcess->getPid()));
+          m_memoryManager->requestPage(candidate->getPid(), pageRequired);
+
+          candidate->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
+          emit processStateChanged(candidate->getPid(), ProcessState::WAITING_MEMORY);
+          
+          m_memoryWaitQueue.push_back({candidate, PAGE_FAULT_PENALTY});
+          
+          // No asignamos m_runningProcess. 
+          // En el siguiente tick, el scheduler probará con otro proceso si hay alguno disponible.
+        }
       }
     }
   }
+
 }
