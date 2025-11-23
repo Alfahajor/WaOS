@@ -13,17 +13,18 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 
-# --- Módulo del Núcleo (Biblioteca Estática) ---
 # Agregamos el subdirectorio que contiene la lógica del núcleo.
 # Este subdirectorio tendrá su propio CMakeLists.txt.
-add_subdirectory(core)
+add_subdirectory(src/core)
+# add_subdirectory(src/scheduler)
+# add_subdirectory(src/memory)
 
-target_link_libraries(simulator PRIVATE
-  core
-  Qt6::Core
-  Qt6::Gui
-  Qt6::Widgets
-)
+# target_link_libraries(simulator PRIVATE
+#   core
+#   Qt6::Core
+#   Qt6::Gui
+#   Qt6::Widgets
+# )
 
 # Simulation main executable
 # add_executable(simulator
@@ -37,4 +38,4 @@ target_link_libraries(simulator PRIVATE
 enable_testing()
 
 # Add test subdirectory
-# add_subdirectory(tests)
+add_subdirectory(tests)
