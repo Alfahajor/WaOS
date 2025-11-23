@@ -1,5 +1,7 @@
 #include "waos/core/Simulator.h"
 #include "waos/core/Parser.h"
+#include <waos/scheduler/IScheduler.h>
+#include <waos/memory/IMemoryManager.h>
 #include <iostream>
 #include <algorithm>
 
@@ -55,11 +57,11 @@ namespace waos::core {
     }
   }
 
-  void Simulator::setScheduler(std::unique_ptr<IScheduler> scheduler) {
+  void Simulator::setScheduler(std::unique_ptr<waos::scheduler::IScheduler> scheduler) {
     m_scheduler = std::move(scheduler);
   }
 
-  void Simulator::setMemoryManager(std::unique_ptr<IMemoryManager> memoryManager) {
+  void Simulator::setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> memoryManager) {
     m_memoryManager = std::move(memoryManager);
   }
 
@@ -258,31 +260,32 @@ namespace waos::core {
   }
 
   void Simulator::handleScheduling() {
-    if (m_runningProcess == nullptr) {
+    while (m_runningProcess == nullptr && m_scheduler->hasReadyProcesses()) {
       Process* candidate = m_scheduler->getNextProcess();
       
-      if (candidate) {
-        int pageRequired = candidate->getCurrentPageRequirement();
+      if (!candidate) break;
 
-        if (m_memoryManager->isPageLoaded(candidate->getPid(), pageRequired)) {
-          m_runningProcess = candidate;
-          m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-          emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-        } else {
-          emit logMessage(QString("Page Fault: P%1 needs Page %2").arg(candidate->getPid()).arg(pageRequired));
-          
-          candidate->incrementPageFaults();
+      int pageRequired = candidate->getCurrentPageRequirement();
 
-          m_memoryManager->requestPage(candidate->getPid(), pageRequired);
 
-          candidate->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
-          emit processStateChanged(candidate->getPid(), ProcessState::WAITING_MEMORY);
-          
-          m_memoryWaitQueue.push_back({candidate, PAGE_FAULT_PENALTY});
-          
-          // No asignamos m_runningProcess. 
-          // En el siguiente tick, el scheduler probará con otro proceso si hay alguno disponible.
-        }
+      if (m_memoryManager->isPageLoaded(candidate->getPid(), pageRequired)) {
+        m_runningProcess = candidate;
+        m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+        emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+      } else {
+        emit logMessage(QString("Page Fault: P%1 needs Page %2").arg(candidate->getPid()).arg(pageRequired));
+
+        candidate->incrementPageFaults();
+
+        m_memoryManager->requestPage(candidate->getPid(), pageRequired);
+
+        candidate->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
+        emit processStateChanged(candidate->getPid(), ProcessState::WAITING_MEMORY);
+
+        m_memoryWaitQueue.push_back({candidate, PAGE_FAULT_PENALTY});
+
+        // No asignamos m_runningProcess.
+        // En el siguiente tick, el scheduler probará con otro proceso si hay alguno disponible.
       }
     }
   }
