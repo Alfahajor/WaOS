@@ -157,7 +157,7 @@ namespace waos::core {
     // Simplificado: si no hay procesos activos, parar
     if (m_incomingProcesses.empty() && m_blockedQueue.empty() && 
       m_memoryWaitQueue.empty() && m_runningProcess == nullptr &&
-      && m_nextProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
+      m_nextProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
        // O verificar si todos los m_processes están TERMINATED
        bool allTerminated = true;
        for(const auto& p : m_processes) {
