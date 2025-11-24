@@ -184,6 +184,9 @@ namespace waos::core {
         // Attempt to reserve initial structures
         m_memoryManager->allocateForProcess(p->getPid(), p->getRequiredPages());
 
+        // Register future references for optimal algorithm
+        m_memoryManager->registerFutureReferences(p->getPid(), p->getPageReferenceString());
+
         // Move to READY (Scheduler se encarga de la cola)
         p->setState(ProcessState::READY, now);
         emit processStateChanged(p->getPid(), ProcessState::READY);
@@ -296,6 +299,9 @@ namespace waos::core {
     m_runningProcess->addCpuTime(1);
     m_runningProcess->advanceInstructionPointer();
     m_runningProcess->incrementQuantum(1);
+
+    // Advance instruction pointer in memory manager (for optimal algorithm)
+    m_memoryManager->advanceInstructionPointer(m_runningProcess->getPid());
 
     if (burstFinished) {
       m_runningProcess->advanceToNextBurst();
