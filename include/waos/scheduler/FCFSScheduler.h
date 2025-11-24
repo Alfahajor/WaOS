@@ -1,8 +1,9 @@
-#pragma once
 /**
  * @file FCFSScheduler.h
  * @brief First-Come, First-Served scheduler header.
  */
+
+#pragma once
 
 #include "IScheduler.h"
 #include <queue>
@@ -28,10 +29,11 @@ public:
     void addProcess(waos::core::Process* p) override;
     waos::core::Process* getNextProcess() override;
     bool hasReadyProcesses() const override;
+    int getTimeSlice() const override;
 
 private:
     std::queue<waos::core::Process*> m_queue;
     mutable std::mutex m_mutex;
 };
 
-} // namespace waos::scheduler
+}

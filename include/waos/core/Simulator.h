@@ -1,6 +1,6 @@
 /**
  * @brief Defines the main orchestration class for the OS simulation.
- * @version 0.2
+ * @version 0.3
  * @date 11-22-2025
  */
 
@@ -23,6 +23,7 @@ namespace waos::core {
   struct MemoryWaitInfo {
     Process* process;
     int ticksRemaining; // Penalización restante
+    int pageNumber; // Save pending page
   };
 
   /**
@@ -126,23 +127,30 @@ namespace waos::core {
 
     // Process currently in CPU
     Process* m_runningProcess;
+
+    // Context Switch Handling
+    Process* m_nextProcess;
+    int m_contextSwitchCounter; // Ticks remaining for CS
+
     bool m_isRunning;
     mutable std::mutex m_simulationMutex; // For thread safety in future steps
 
-    // Penalty configuration
     const int PAGE_FAULT_PENALTY = 5; 
+    const int CONTEXT_SWITCH_DURATION = 1;
+    const int SYSTEM_QUANTUM = 4;
 
-    /**
-     * @brief The main logic step executed every tick.
-     */
+    // The main logic step executed every tick.
     void step();
 
-    // Helpers
+    // Helpers to simulation
     void handleArrivals();
     void handleIO();
     void handlePageFaults();
     void handleCpuExecution();
     void handleScheduling();
+
+    // Helper to initiate context switch
+    void triggerContextSwitch(Process* current, Process* next);
   };
 
 }

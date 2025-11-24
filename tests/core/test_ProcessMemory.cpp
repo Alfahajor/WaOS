@@ -18,7 +18,7 @@ void test_reference_string_generation() {
   bursts.push({BurstType::CPU, 100});
   
   // PID 1, Arrival 0, 5 Pages
-  Process p(1, 0, bursts, 5);
+  Process p(1, 0, 0, bursts, 5);
 
   // Validate initial instruction pointer behavior
   int firstPage = p.getCurrentPageRequirement();

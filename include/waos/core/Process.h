@@ -1,6 +1,6 @@
 /**
  * @brief Defines the Process Control Block (PCB) data structure for the simulator.
- * @version 0.2
+ * @version 0.3
  * @date 11-21-2025
  */
 
@@ -55,6 +55,7 @@ namespace waos::core {
     uint64_t totalIoTime = 0;
     uint64_t lastReadyTime = 0;
     int pageFaults = 0;
+    int preemptions = 0; // Statistic for context switches forced by OS
   };
 
   /**
@@ -71,14 +72,16 @@ namespace waos::core {
      * @brief Constructs a new Process instance.
      * @param pid The unique process identifier.
      * @param arrivalTime The simulation time at which the process arrives.
+     * @param priority The priority value
      * @param cpuBursts A queue of CPU burst durations.
      * @param requiredPages The number of memory pages this process requires.
      */
-    Process(int pid, uint64_t arrivalTime, std::queue<Burst> bursts, int requiredPages);
+    Process(int pid, uint64_t arrivalTime, int priority, std::queue<Burst> bursts, int requiredPages);
 
     int getPid() const;
     uint64_t getArrivalTime() const;
     int getRequiredPages() const;
+    int getPriority() const; // Lower value = Higher priority
 
     ProcessState getState() const;
     void setState(ProcessState newState, uint64_t currentTime);
@@ -118,18 +121,26 @@ namespace waos::core {
      */
     void advanceInstructionPointer();
 
+    // Quantum Management
+    int getQuantumUsed() const;
+    void resetQuantum();
+    void incrementQuantum(int ticks);
+
     const ProcessStats& getStats() const;
     void addCpuTime(uint64_t time);
     void addIoTime(uint64_t time);
     void incrementPageFaults();
+    void incrementPreemptions();
 
   private:
     int m_pid;
+    int m_priority;
     ProcessState m_state;
 
     // Scheduling Information
     uint64_t m_arrivalTime;
     std::queue<Burst> m_bursts;
+    int m_quantumUsed; // Ticks used in current CPU slice
     
     // Memory Information
     int m_requiredPages;

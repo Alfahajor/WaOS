@@ -37,7 +37,6 @@ namespace waos::scheduler {
      * @param p Pointer to waos::core::Process (must be valid).
      */
     virtual void addProcess(waos::core::Process* p) = 0;
-    virtual void addProcess(std::unique_ptr<waos::core::Process> p) = 0;
 
     /**
      * @brief Select, remove and return the next process according to the policy.
@@ -54,11 +53,10 @@ namespace waos::scheduler {
     virtual bool hasReadyProcesses() const = 0;
 
     /**
-     * @brief Informs the scheduler that a time unit (tick) has passed.
-     *
-     * Some algorithms (like aging) may need this to update priorities.
+     * @brief Defines the maximum CPU ticks a process can run before preemption.
+     * @return Positive integer for Quantum, or -1 for infinite (no timer preemption).
      */
-    virtual void tick() = 0;
+    virtual int getTimeSlice() const = 0;
   };
 
 }

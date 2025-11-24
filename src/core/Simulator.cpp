@@ -10,6 +10,8 @@ namespace waos::core {
   Simulator::Simulator(QObject* parent)
     : QObject(parent),
       m_runningProcess(nullptr),
+      m_nextProcess(nullptr),
+      m_contextSwitchCounter(0),
       m_isRunning(false) {
   }
 
@@ -25,12 +27,15 @@ namespace waos::core {
       m_blockedQueue.clear();
       m_memoryWaitQueue.clear();
       m_runningProcess = nullptr;
+      m_nextProcess = nullptr;
+      m_contextSwitchCounter = 0;
 
       // Convert ProcessInfo (DTO) to Process (Entity)
       for (const auto& info : processInfos) {
         auto process = std::make_unique<Process>(
           info.pid,
           info.arrivalTime,
+          info.priority,
           info.bursts,
           info.requiredPages
         );
@@ -91,6 +96,8 @@ namespace waos::core {
   void Simulator::reset() {
     stop();
     m_runningProcess = nullptr;
+    m_nextProcess = nullptr;
+    m_contextSwitchCounter = 0;
     m_blockedQueue.clear();
     m_memoryWaitQueue.clear(); 
     // Reset logic will be refined here (reset clock, process states, etc.)
@@ -113,19 +120,44 @@ namespace waos::core {
     uint64_t now = m_clock.getTime();
     emit clockTicked(now);
 
+    // Process Arrivals (May cause Preemption)
     handleArrivals();
+
+    // IO Devices (Parallel to CPU)
     handleIO();
+
+    // Memory Disk Operations (Parallel to CPU)
     handlePageFaults();
-    handleCpuExecution();
-    handleScheduling();
+
+    // Kernel / CPU Execution
+    if (m_contextSwitchCounter > 0) {
+      // CPU is busy switching context
+      m_contextSwitchCounter--;
+      if (m_contextSwitchCounter == 0 && m_nextProcess) {
+        m_runningProcess = m_nextProcess;
+        m_nextProcess = nullptr;
+
+        m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+        m_runningProcess->resetQuantum(); // Reset Quantum on restore
+
+        emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+        emit logMessage(QString("Context Switch complete. Running P%1").arg(m_runningProcess->getPid()));
+      }
+    } else {
+      // CPU is free for user process
+      handleCpuExecution();
+
+      // Only schedule if we are not currently switching and have no running process
+      if (m_runningProcess == nullptr && m_contextSwitchCounter == 0) handleScheduling();
+    }
 
     m_clock.tick();
 
     // Check for termination condition
     // Simplificado: si no hay procesos activos, parar
     if (m_incomingProcesses.empty() && m_blockedQueue.empty() && 
-      m_memoryWaitQueue.empty() &&
-      m_runningProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
+      m_memoryWaitQueue.empty() && m_runningProcess == nullptr &&
+      m_nextProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
        // O verificar si todos los m_processes están TERMINATED
        bool allTerminated = true;
        for(const auto& p : m_processes) {
@@ -144,8 +176,8 @@ namespace waos::core {
 
   void Simulator::handleArrivals() {
     uint64_t now = m_clock.getTime();
-
     auto it = m_incomingProcesses.begin();
+
     while (it != m_incomingProcesses.end()) {
       Process* p = *it;
       if (p->getArrivalTime() <= now) {
@@ -156,9 +188,21 @@ namespace waos::core {
         p->setState(ProcessState::READY, now);
         emit processStateChanged(p->getPid(), ProcessState::READY);
 
-        // Aquí delegamos al Scheduler la gestión de la cola de ready
-        // Como el Simulator es dueño, pasamos referencia o raw ptr.
+        // Here delegamos al Scheduler la gestión de la ready queue
         m_scheduler->addProcess(p);
+
+        // Check if we need to preempt the current running process or the one pending switch
+        Process* current = (m_runningProcess) ? m_runningProcess : m_nextProcess;
+
+        if (current && p->getPriority() < current->getPriority()) {
+          // New process has higher priority (lower value)
+          emit logMessage(QString("Preemption: P%1 (Prio %2) displaces P%3 (Prio %4)")
+              .arg(p->getPid()).arg(p->getPriority())
+              .arg(current->getPid()).arg(current->getPriority()));
+
+          triggerContextSwitch(current, nullptr); // Put current back to ready
+          // The scheduler will pick the new high-priority process in handleScheduling
+        }
 
         it = m_incomingProcesses.erase(it);
         emit logMessage(QString("Process P%1 arrived.").arg(p->getPid()));
@@ -183,11 +227,13 @@ namespace waos::core {
         p->advanceToNextBurst();
 
         // Back to READY
-        uint64_t now = m_clock.getTime();
-        p->setState(ProcessState::READY, now);
+        p->setState(ProcessState::READY,m_clock.getTime());
         emit processStateChanged(p->getPid(), ProcessState::READY);
 
         m_scheduler->addProcess(p);
+
+        // Preemption on IO Completion could also happen here for Priority Scheduling
+        // We omit it for simplicity, but it follows the same logic as Arrivals.
 
         it = m_blockedQueue.erase(it);
         emit logMessage(QString("Process P%1 finished I/O.").arg(p->getPid()));
@@ -207,8 +253,9 @@ namespace waos::core {
       info.process->addIoTime(1); // Contamos espera de disco como IO Time
 
       if (info.ticksRemaining <= 0) {
-        // La página ha sido "cargada" (simulado por el tiempo transcurrido)
-        // El MemoryManager ya hizo su lógica en requestPage(), aquí solo volvemos a Ready.
+        // Notificar al MemoryManager que la carga física ha terminado.
+        // Esto actualiza la PageTableEntry a 'present = true'.
+        m_memoryManager->completePageLoad(info.process->getPid(), info.pageNumber);
         
         info.process->setState(ProcessState::READY, m_clock.getTime());
         emit processStateChanged(info.process->getPid(), ProcessState::READY);
@@ -223,71 +270,94 @@ namespace waos::core {
   }
 
   void Simulator::handleCpuExecution() {
-    if (m_runningProcess) {
-      // Process "uses" the CPU
-      bool burstFinished = m_runningProcess->updateCurrentBurst(1);
-      m_runningProcess->addCpuTime(1);
+    if (!m_runningProcess) return;
 
-      // Advance Instruction Pointer
-      m_runningProcess->advanceInstructionPointer();
+    // MMU Check (Hardware Instruction Fetch simulation)
+    int pageRequired = m_runningProcess->getCurrentPageRequirement();
 
-      if (burstFinished) {
-        m_runningProcess->advanceToNextBurst();
+    if (!m_memoryManager->isPageLoaded(m_runningProcess->getPid(), pageRequired)) {
+      // Page Fault Exception
+      emit logMessage(QString("Page Fault during exec: P%1 needs Page %2")
+          .arg(m_runningProcess->getPid()).arg(pageRequired));
 
-        if (!m_runningProcess->hasMoreBursts()) {
-          m_runningProcess->setState(ProcessState::TERMINATED, m_clock.getTime());
-          emit processStateChanged(m_runningProcess->getPid(), ProcessState::TERMINATED);
-          emit logMessage(QString("Process P%1 Terminated.").arg(m_runningProcess->getPid()));
-          m_memoryManager->freeForProcess(m_runningProcess->getPid());
+      m_runningProcess->incrementPageFaults();
+      m_memoryManager->requestPage(m_runningProcess->getPid(), pageRequired);
+
+      m_runningProcess->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
+      emit processStateChanged(m_runningProcess->getPid(), ProcessState::WAITING_MEMORY);
+
+      m_memoryWaitQueue.push_back({m_runningProcess, PAGE_FAULT_PENALTY, pageRequired});
+      m_runningProcess = nullptr; // Immediate yield on fault
+      return; // Tick used for the faulting instruction attempt
+    }
+
+    // Process "uses" the CPU
+    bool burstFinished = m_runningProcess->updateCurrentBurst(1);
+    m_runningProcess->addCpuTime(1);
+    m_runningProcess->advanceInstructionPointer();
+    m_runningProcess->incrementQuantum(1);
+
+    if (burstFinished) {
+      m_runningProcess->advanceToNextBurst();
+
+      if (!m_runningProcess->hasMoreBursts()) {
+        m_runningProcess->setState(ProcessState::TERMINATED, m_clock.getTime());
+        emit processStateChanged(m_runningProcess->getPid(), ProcessState::TERMINATED);
+        emit logMessage(QString("Process P%1 Terminated.").arg(m_runningProcess->getPid()));
+        m_memoryManager->freeForProcess(m_runningProcess->getPid());
+        m_runningProcess = nullptr;
+      } else {
+        if (m_runningProcess->getCurrentBurstType() == BurstType::IO) {
+          m_runningProcess->setState(ProcessState::BLOCKED, m_clock.getTime());
+          emit processStateChanged(m_runningProcess->getPid(), ProcessState::BLOCKED);
+          m_blockedQueue.push_back(m_runningProcess);
           m_runningProcess = nullptr;
         } else {
-          if (m_runningProcess->getCurrentBurstType() == BurstType::IO) {
-            m_runningProcess->setState(ProcessState::BLOCKED, m_clock.getTime());
-            emit processStateChanged(m_runningProcess->getPid(), ProcessState::BLOCKED);
-            m_blockedQueue.push_back(m_runningProcess);
-            m_runningProcess = nullptr;
-          } else {
-            // Sigue siendo CPU (caso raro de CPU consecutiva o retorno de interrupción)
-            // El Scheduler decide. Devolvemos a Ready para que el Scheduler re-evalúe.
-            m_runningProcess->setState(ProcessState::READY, m_clock.getTime());
-            emit processStateChanged(m_runningProcess->getPid(), ProcessState::READY);
-            m_scheduler->addProcess(m_runningProcess);
-            m_runningProcess = nullptr;
-          }
+          // Sigue siendo CPU (caso raro de CPU consecutiva o retorno de interrupción)
+          // For now, treat as yield to re-evaluate priorities/quantum
+          triggerContextSwitch(m_runningProcess, nullptr);
         }
+      }
+    } else {
+      // Burst not finished, check Quantum (Preemption)
+      if (m_runningProcess->getQuantumUsed() >= SYSTEM_QUANTUM) {
+        emit logMessage(QString("Quantum expired for P%1").arg(m_runningProcess->getPid()));
+        m_runningProcess->incrementPreemptions();
+        triggerContextSwitch(m_runningProcess, nullptr);
       }
     }
   }
 
   void Simulator::handleScheduling() {
-    while (m_runningProcess == nullptr && m_scheduler->hasReadyProcesses()) {
-      Process* candidate = m_scheduler->getNextProcess();
-      
-      if (!candidate) break;
+    if (!m_scheduler->hasReadyProcesses()) return;
 
-      int pageRequired = candidate->getCurrentPageRequirement();
+    Process* candidate = m_scheduler->getNextProcess();
 
+    if (!candidate) return;
 
-      if (m_memoryManager->isPageLoaded(candidate->getPid(), pageRequired)) {
-        m_runningProcess = candidate;
-        m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-        emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-      } else {
-        emit logMessage(QString("Page Fault: P%1 needs Page %2").arg(candidate->getPid()).arg(pageRequired));
+    // Initiate Context Switch
+    m_nextProcess = candidate;
+    m_contextSwitchCounter = CONTEXT_SWITCH_DURATION;
 
-        candidate->incrementPageFaults();
-
-        m_memoryManager->requestPage(candidate->getPid(), pageRequired);
-
-        candidate->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
-        emit processStateChanged(candidate->getPid(), ProcessState::WAITING_MEMORY);
-
-        m_memoryWaitQueue.push_back({candidate, PAGE_FAULT_PENALTY});
-
-        // No asignamos m_runningProcess.
-        // En el siguiente tick, el scheduler probará con otro proceso si hay alguno disponible.
-      }
-    }
+    // We do NOT set state to RUNNING yet.
+    // It remains READY until CS is done in step().
+    emit logMessage(QString("Scheduler selected P%1. Switching context...").arg(candidate->getPid()));
   }
 
+  void Simulator::triggerContextSwitch(Process* current, Process* next) {
+    if (current) {
+      current->setState(ProcessState::READY, m_clock.getTime());
+      emit processStateChanged(current->getPid(), ProcessState::READY);
+      m_scheduler->addProcess(current);
+    }
+    m_runningProcess = nullptr;
+
+    // If we have a specific next process (direct switch), set it up
+    // Otherwise, set running to null so handleScheduling picks one
+    if (next) {
+      m_nextProcess = next;
+      m_contextSwitchCounter = CONTEXT_SWITCH_DURATION;
+    }
+    // If next is null, handleScheduling will run next tick or same tick if called before
+  }
 }

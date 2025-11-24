@@ -1,10 +1,11 @@
-#pragma once
 /**
  * @file RRScheduler.h
  * @brief Round-Robin scheduler skeleton.
  *
  * Real RR logic (time slicing and requeueing) will be implemented later.
  */
+
+#pragma once
 
 #include "IScheduler.h"
 #include <queue>
@@ -25,7 +26,7 @@ namespace waos::scheduler {
  */
 class RRScheduler : public IScheduler {
 public:
-    explicit RRScheduler(std::chrono::milliseconds quantum = std::chrono::milliseconds(100))
+    explicit RRScheduler(int quantum = 5)
         : m_quantum(quantum) {}
 
     ~RRScheduler() override = default;
@@ -33,13 +34,12 @@ public:
     void addProcess(waos::core::Process* p) override;
     waos::core::Process* getNextProcess() override;
     bool hasReadyProcesses() const override;
-
-    std::chrono::milliseconds getQuantum() const { return m_quantum; }
+    int getTimeSlice() const override;
 
 private:
-    std::chrono::milliseconds m_quantum;
+    int m_quantum;
     mutable std::mutex m_mutex;
     std::queue<waos::core::Process*> m_queue;
 };
 
-} // namespace waos::scheduler
+}
