@@ -4,13 +4,15 @@
 
 namespace waos::core {
 
-  Process::Process(int pid, uint64_t arrivalTime, std::queue<Burst> bursts, int requiredPages)
+  Process::Process(int pid, uint64_t arrivalTime, int priority, std::queue<Burst> bursts, int requiredPages)
     : m_pid(pid),
+      m_priority(priority),
       m_state(ProcessState::NEW),
       m_arrivalTime(arrivalTime),
       m_bursts(std::move(bursts)),
       m_requiredPages(requiredPages),
-      m_instructionPointer(0) {
+      m_instructionPointer(0),
+      m_quantumUsed(0) {
     if (m_pid < 0) throw std::invalid_argument("Process ID cannot be negative.");
     if (m_requiredPages < 0) throw std::invalid_argument("Required pages cannot be negative.");
 
@@ -18,10 +20,9 @@ namespace waos::core {
   }
 
   int Process::getPid() const { return m_pid; }
-
   uint64_t Process::getArrivalTime() const { return m_arrivalTime; }
-
   int Process::getRequiredPages() const { return m_requiredPages; }
+  int Process::getPriority() const { return m_priority; }
 
   ProcessState Process::getState() const { return m_state; }
 
@@ -120,11 +121,16 @@ namespace waos::core {
       m_instructionPointer++;
     }
   }
-  
+
+  int Process::getQuantumUsed() const { return m_quantumUsed; }
+  void Process::resetQuantum() { m_quantumUsed = 0; }
+  void Process::incrementQuantum(int ticks) { m_quantumUsed += ticks; }
+
   const ProcessStats& Process::getStats() const { return m_stats; }
 
   void Process::addCpuTime(uint64_t time) { m_stats.totalCpuTime += time; }
   void Process::addIoTime(uint64_t time) { m_stats.totalIoTime += time; }
   void Process::incrementPageFaults() { m_stats.pageFaults++; }
+  void Process::incrementPreemptions() { m_stats.preemptions++; }
 
 }
