@@ -121,6 +121,13 @@ namespace waos::core {
      */
     void advanceInstructionPointer();
 
+    /**
+     * @brief Gets the complete page reference string for this process.
+     * Used by Optimal memory manager to make replacement decisions.
+     * @return Const reference to the vector of page references.
+     */
+    const std::vector<int>& getPageReferenceString() const;
+
     // Quantum Management
     int getQuantumUsed() const;
     void resetQuantum();
