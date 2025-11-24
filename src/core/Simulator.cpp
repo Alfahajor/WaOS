@@ -129,16 +129,35 @@ namespace waos::core {
     // Memory Disk Operations (Parallel to CPU)
     handlePageFaults();
 
-    handleCpuExecution();
-    handleScheduling();
+    // Kernel / CPU Execution
+    if (m_contextSwitchCounter > 0) {
+      // CPU is busy switching context
+      m_contextSwitchCounter--;
+      if (m_contextSwitchCounter == 0 && m_nextProcess) {
+        m_runningProcess = m_nextProcess;
+        m_nextProcess = nullptr;
+
+        m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+        m_runningProcess->resetQuantum(); // Reset Quantum on restore
+
+        emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+        emit logMessage(QString("Context Switch complete. Running P%1").arg(m_runningProcess->getPid()));
+      }
+    } else {
+      // CPU is free for user process
+      handleCpuExecution();
+
+      // Only schedule if we are not currently switching and have no running process
+      if (m_runningProcess == nullptr && m_contextSwitchCounter == 0) handleScheduling();
+    }
 
     m_clock.tick();
 
     // Check for termination condition
     // Simplificado: si no hay procesos activos, parar
     if (m_incomingProcesses.empty() && m_blockedQueue.empty() && 
-      m_memoryWaitQueue.empty() &&
-      m_runningProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
+      m_memoryWaitQueue.empty() && m_runningProcess == nullptr &&
+      && m_nextProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
        // O verificar si todos los m_processes están TERMINATED
        bool allTerminated = true;
        for(const auto& p : m_processes) {
@@ -157,8 +176,8 @@ namespace waos::core {
 
   void Simulator::handleArrivals() {
     uint64_t now = m_clock.getTime();
-
     auto it = m_incomingProcesses.begin();
+
     while (it != m_incomingProcesses.end()) {
       Process* p = *it;
       if (p->getArrivalTime() <= now) {
@@ -169,9 +188,21 @@ namespace waos::core {
         p->setState(ProcessState::READY, now);
         emit processStateChanged(p->getPid(), ProcessState::READY);
 
-        // Aquí delegamos al Scheduler la gestión de la cola de ready
-        // Como el Simulator es dueño, pasamos referencia o raw ptr.
+        // Here delegamos al Scheduler la gestión de la ready queue
         m_scheduler->addProcess(p);
+
+        // Check if we need to preempt the current running process or the one pending switch
+        Process* current = (m_runningProcess) ? m_runningProcess : m_nextProcess;
+
+        if (current && p->getPriority() < current->getPriority()) {
+          // New process has higher priority (lower value)
+          emit logMessage(QString("Preemption: P%1 (Prio %2) displaces P%3 (Prio %4)")
+              .arg(p->getPid()).arg(p->getPriority())
+              .arg(current->getPid()).arg(current->getPriority()));
+
+          triggerContextSwitch(current, nullptr); // Put current back to ready
+          // The scheduler will pick the new high-priority process in handleScheduling
+        }
 
         it = m_incomingProcesses.erase(it);
         emit logMessage(QString("Process P%1 arrived.").arg(p->getPid()));
@@ -196,11 +227,13 @@ namespace waos::core {
         p->advanceToNextBurst();
 
         // Back to READY
-        uint64_t now = m_clock.getTime();
-        p->setState(ProcessState::READY, now);
+        p->setState(ProcessState::READY,m_clock.getTime());
         emit processStateChanged(p->getPid(), ProcessState::READY);
 
         m_scheduler->addProcess(p);
+
+        // Preemption on IO Completion could also happen here for Priority Scheduling
+        // We omit it for simplicity, but it follows the same logic as Arrivals.
 
         it = m_blockedQueue.erase(it);
         emit logMessage(QString("Process P%1 finished I/O.").arg(p->getPid()));
@@ -303,4 +336,20 @@ namespace waos::core {
     }
   }
 
+  void Simulator::triggerContextSwitch(Process* current, Process* next) {
+    if (current) {
+      current->setState(ProcessState::READY, m_clock.getTime());
+      emit processStateChanged(current->getPid(), ProcessState::READY);
+      m_scheduler->addProcess(current);
+    }
+    m_runningProcess = nullptr;
+
+    // If we have a specific next process (direct switch), set it up
+    // Otherwise, set running to null so handleScheduling picks one
+    if (next) {
+      m_nextProcess = next;
+      m_contextSwitchCounter = CONTEXT_SWITCH_DURATION;
+    }
+    // If next is null, handleScheduling will run next tick or same tick if called before
+  }
 }
