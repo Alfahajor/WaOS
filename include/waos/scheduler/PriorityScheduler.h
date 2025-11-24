@@ -1,4 +1,3 @@
-#pragma once
 /**
  * @file PriorityScheduler.h
  * @brief Priority-based scheduler skeleton.
@@ -6,6 +5,8 @@
  * For now, all processes are assigned a default priority of 0
  * (until Process is extended with an explicit priority).
  */
+
+#pragma once
 
 #include "IScheduler.h"
 #include <map>
@@ -32,10 +33,11 @@ public:
     void addProcess(waos::core::Process* p) override;
     waos::core::Process* getNextProcess() override;
     bool hasReadyProcesses() const override;
+    int getTimeSlice() const override;
 
 private:
     mutable std::mutex m_mutex;
-    std::map<int, std::deque<waos::core::Process*>> m_queues; ///< priority -> queue
+    std::map<int, std::deque<waos::core::Process*>> m_queues; // < priority to queue
 };
 
-} // namespace waos::scheduler
+}

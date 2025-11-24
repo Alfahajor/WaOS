@@ -1,10 +1,11 @@
-#pragma once
 /**
  * @file SJFScheduler.h
  * @brief Shortest Job First scheduler (skeleton).
  *
  * This is a skeleton: later we will sort by current CPU burst length.
  */
+
+#pragma once
 
 #include "IScheduler.h"
 #include <vector>
@@ -31,10 +32,11 @@ public:
     void addProcess(waos::core::Process* p) override;
     waos::core::Process* getNextProcess() override;
     bool hasReadyProcesses() const override;
+    int getTimeSlice() const override;
 
 private:
     mutable std::mutex m_mutex;
-    std::vector<waos::core::Process*> m_pool; ///< unsorted pool (stub)
+    std::vector<waos::core::Process*> m_pool; // < unsorted pool
 };
 
-} // namespace waos::scheduler
+}
