@@ -23,6 +23,7 @@ namespace waos::core {
   struct MemoryWaitInfo {
     Process* process;
     int ticksRemaining; // Penalización restante
+    int pageNumber; // Save pending page
   };
 
   /**

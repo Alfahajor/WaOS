@@ -253,8 +253,9 @@ namespace waos::core {
       info.process->addIoTime(1); // Contamos espera de disco como IO Time
 
       if (info.ticksRemaining <= 0) {
-        // La página ha sido "cargada" (simulado por el tiempo transcurrido)
-        // El MemoryManager ya hizo su lógica en requestPage(), aquí solo volvemos a Ready.
+        // Notificar al MemoryManager que la carga física ha terminado.
+        // Esto actualiza la PageTableEntry a 'present = true'.
+        m_memoryManager->completePageLoad(info.process->getPid(), info.pageNumber);
         
         info.process->setState(ProcessState::READY, m_clock.getTime());
         emit processStateChanged(info.process->getPid(), ProcessState::READY);
@@ -285,7 +286,7 @@ namespace waos::core {
       m_runningProcess->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
       emit processStateChanged(m_runningProcess->getPid(), ProcessState::WAITING_MEMORY);
 
-      m_memoryWaitQueue.push_back({m_runningProcess, PAGE_FAULT_PENALTY});
+      m_memoryWaitQueue.push_back({m_runningProcess, PAGE_FAULT_PENALTY, pageRequired});
       m_runningProcess = nullptr; // Immediate yield on fault
       return; // Tick used for the faulting instruction attempt
     }

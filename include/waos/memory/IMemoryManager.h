@@ -58,6 +58,12 @@ namespace waos::memory {
      * Frees all frames used by the process and removes its page table
      */
     virtual void freeForProcess(int processId) = 0;
+
+    /**
+     * @brief Marks a page as successfully loaded into a frame.
+     * Should be called by the Simulator after the I/O penalty time expires.
+     */
+    virtual void completePageLoad(int processId, int pageNumber) = 0;
   };
 
 }
