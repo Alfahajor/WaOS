@@ -10,6 +10,8 @@ namespace waos::core {
   Simulator::Simulator(QObject* parent)
     : QObject(parent),
       m_runningProcess(nullptr),
+      m_nextProcess(nullptr),
+      m_contextSwitchCounter(0),
       m_isRunning(false) {
   }
 
@@ -25,12 +27,15 @@ namespace waos::core {
       m_blockedQueue.clear();
       m_memoryWaitQueue.clear();
       m_runningProcess = nullptr;
+      m_nextProcess = nullptr;
+      m_contextSwitchCounter = 0;
 
       // Convert ProcessInfo (DTO) to Process (Entity)
       for (const auto& info : processInfos) {
         auto process = std::make_unique<Process>(
           info.pid,
           info.arrivalTime,
+          info.priority,
           info.bursts,
           info.requiredPages
         );
@@ -91,6 +96,8 @@ namespace waos::core {
   void Simulator::reset() {
     stop();
     m_runningProcess = nullptr;
+    m_nextProcess = nullptr;
+    m_contextSwitchCounter = 0;
     m_blockedQueue.clear();
     m_memoryWaitQueue.clear(); 
     // Reset logic will be refined here (reset clock, process states, etc.)
@@ -113,9 +120,15 @@ namespace waos::core {
     uint64_t now = m_clock.getTime();
     emit clockTicked(now);
 
+    // Process Arrivals (May cause Preemption)
     handleArrivals();
+
+    // IO Devices (Parallel to CPU)
     handleIO();
+
+    // Memory Disk Operations (Parallel to CPU)
     handlePageFaults();
+
     handleCpuExecution();
     handleScheduling();
 
