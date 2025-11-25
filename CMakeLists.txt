@@ -17,7 +17,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Quick Qml)
 # Este subdirectorio tendrá su propio CMakeLists.txt.
 add_subdirectory(src/core)
 add_subdirectory(src/scheduler)
-# add_subdirectory(src/memory)
+add_subdirectory(src/memory)
 
 # GUI Module (Qt Quick)
 add_subdirectory(src/gui)

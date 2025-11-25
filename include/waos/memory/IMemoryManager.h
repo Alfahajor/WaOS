@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 namespace waos::memory {
 
@@ -64,6 +65,28 @@ namespace waos::memory {
      * Should be called by the Simulator after the I/O penalty time expires.
      */
     virtual void completePageLoad(int processId, int pageNumber) = 0;
+
+    /**
+     * @brief Optional: Register future page references for optimal algorithms.
+     * Only OptimalMemoryManager implements this. Other algorithms can ignore it.
+     * @param processId Process identifier.
+     * @param referenceString Complete sequence of future page references.
+     */
+    virtual void registerFutureReferences(int processId, const std::vector<int>& referenceString) {
+      // Default implementation does nothing (for FIFO, LRU)
+      (void)processId;
+      (void)referenceString;
+    }
+
+    /**
+     * @brief Optional: Advance instruction pointer for optimal algorithms.
+     * Only OptimalMemoryManager uses this. Other algorithms can ignore it.
+     * @param processId Process identifier.
+     */
+    virtual void advanceInstructionPointer(int processId) {
+      // Default implementation does nothing (for FIFO, LRU)
+      (void)processId;
+    }
   };
 
 }

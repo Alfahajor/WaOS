@@ -122,6 +122,10 @@ namespace waos::core {
     }
   }
 
+  const std::vector<int>& Process::getPageReferenceString() const {
+    return m_pageReferenceString;
+  }
+
   int Process::getQuantumUsed() const { return m_quantumUsed; }
   void Process::resetQuantum() { m_quantumUsed = 0; }
   void Process::incrementQuantum(int ticks) { m_quantumUsed += ticks; }
