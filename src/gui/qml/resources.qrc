@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>ProcessMonitor.qml</file>
+        <file>MemoryMonitor.qml</file>
+        <file>BlockingPanel.qml</file>
+        <file>ControlPanel.qml</file>
+        <file>GanttChart.qml</file>
+    </qresource>
+</RCC>
