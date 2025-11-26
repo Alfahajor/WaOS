@@ -16,6 +16,9 @@ void SJFScheduler::addProcess(waos::core::Process* p) {
         [](waos::core::Process* a, waos::core::Process* b) {
             return a->getCurrentBurstDuration() < b->getCurrentBurstDuration();
         });
+    
+    std::cout << "  [SJF] Added P" << p->getPid() 
+              << " (burst=" << p->getCurrentBurstDuration() << ") to ready queue" << std::endl;
 }
 
 
@@ -25,6 +28,8 @@ waos::core::Process* SJFScheduler::getNextProcess() {
 
     waos::core::Process* p = m_pool.front();
     m_pool.erase(m_pool.begin());
+    std::cout << "  [SJF] Selected P" << p->getPid() 
+              << " for execution (shortest burst=" << p->getCurrentBurstDuration() << ")" << std::endl;
     return p;
 }
 
