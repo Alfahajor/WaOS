@@ -1,0 +1,24 @@
+# Test processes for SJF Scheduler Integration
+# Format: PID ArrivalTime Bursts Priority RequiredPages
+# SJF selects the process with the shortest CPU burst
+
+# Test Case 1: Processes arrive at the same time but with different burst lengths
+P1 0 CPU(8) 1 2
+P2 0 CPU(2) 1 2
+P3 0 CPU(4) 1 2
+
+# Test Case 2: Processes arrive at different times
+P4 10 CPU(10) 1 2
+P5 12 CPU(3) 1 2
+P6 14 CPU(5) 1 2
+P7 16 CPU(2) 1 2
+
+# Test Case 3: Processes with I/O
+P8 25 CPU(6),E/S(2),CPU(3) 1 2
+P9 26 CPU(4) 1 2
+
+# Test Case 4: Extreme case - very long process vs several short ones
+P10 35 CPU(15) 1 3
+P11 36 CPU(1) 1 2
+P12 37 CPU(2) 1 2
+P13 38 CPU(3) 1 2
