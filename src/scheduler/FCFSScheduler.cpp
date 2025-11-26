@@ -8,6 +8,7 @@ void FCFSScheduler::addProcess(waos::core::Process* p) {
     if (!p) return;
     std::lock_guard<std::mutex> lock(m_mutex);
     m_queue.push(p);
+    std::cout << "  [FCFS] Added P" << p->getPid() << " to ready queue" << std::endl;
 }
 
 waos::core::Process* FCFSScheduler::getNextProcess() {
@@ -16,6 +17,7 @@ waos::core::Process* FCFSScheduler::getNextProcess() {
 
     waos::core::Process* p = m_queue.front();
     m_queue.pop();
+    std::cout << "  [FCFS] Selected P" << p->getPid() << " for execution (FIFO)" << std::endl;
     return p;
 }
 
