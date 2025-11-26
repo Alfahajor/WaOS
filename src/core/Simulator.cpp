@@ -233,6 +233,7 @@ namespace waos::core {
         p->setState(ProcessState::READY,m_clock.getTime());
         emit processStateChanged(p->getPid(), ProcessState::READY);
 
+        std::cout << "  [SIM] P" << p->getPid() << " finished I/O burst, back to READY" << std::endl;
         m_scheduler->addProcess(p);
 
         // Preemption on IO Completion could also happen here for Priority Scheduling
@@ -307,6 +308,7 @@ namespace waos::core {
       m_runningProcess->advanceToNextBurst();
 
       if (!m_runningProcess->hasMoreBursts()) {
+        std::cout << "  [SIM] P" << m_runningProcess->getPid() << " TERMINATED (all bursts completed)" << std::endl;
         m_runningProcess->setState(ProcessState::TERMINATED, m_clock.getTime());
         emit processStateChanged(m_runningProcess->getPid(), ProcessState::TERMINATED);
         emit logMessage(QString("Process P%1 Terminated.").arg(m_runningProcess->getPid()));
@@ -314,6 +316,7 @@ namespace waos::core {
         m_runningProcess = nullptr;
       } else {
         if (m_runningProcess->getCurrentBurstType() == BurstType::IO) {
+          std::cout << "  [SIM] P" << m_runningProcess->getPid() << " finished CPU burst, going to I/O (BLOCKED)" << std::endl;
           m_runningProcess->setState(ProcessState::BLOCKED, m_clock.getTime());
           emit processStateChanged(m_runningProcess->getPid(), ProcessState::BLOCKED);
           m_blockedQueue.push_back(m_runningProcess);
@@ -321,12 +324,17 @@ namespace waos::core {
         } else {
           // Sigue siendo CPU (caso raro de CPU consecutiva o retorno de interrupción)
           // For now, treat as yield to re-evaluate priorities/quantum
+          std::cout << "  [SIM] P" << m_runningProcess->getPid() << " finished CPU burst, has more CPU" << std::endl;
           triggerContextSwitch(m_runningProcess, nullptr);
         }
       }
     } else {
       // Burst not finished, check Quantum (Preemption)
-      if (m_runningProcess->getQuantumUsed() >= SYSTEM_QUANTUM) {
+      int timeSlice = m_scheduler->getTimeSlice();
+      
+      // Only apply quantum if scheduler uses time-slicing (timeSlice > 0)
+      if (timeSlice > 0 && m_runningProcess->getQuantumUsed() >= timeSlice) {
+        std::cout << "  [SIM] P" << m_runningProcess->getPid() << " QUANTUM EXPIRED (preempted)" << std::endl;
         emit logMessage(QString("Quantum expired for P%1").arg(m_runningProcess->getPid()));
         m_runningProcess->incrementPreemptions();
         triggerContextSwitch(m_runningProcess, nullptr);
