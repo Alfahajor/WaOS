@@ -1,6 +1,7 @@
 #include "waos/core/Process.h"
 #include <stdexcept>
 #include <random>
+#include <iostream>
 
 namespace waos::core {
 
@@ -12,11 +13,93 @@ namespace waos::core {
       m_bursts(std::move(bursts)),
       m_requiredPages(requiredPages),
       m_instructionPointer(0),
-      m_quantumUsed(0) {
+      m_quantumUsed(0),
+      m_running(false),
+      m_tickCompleted(false),
+      m_stopThread(false) {
+
     if (m_pid < 0) throw std::invalid_argument("Process ID cannot be negative.");
     if (m_requiredPages < 0) throw std::invalid_argument("Required pages cannot be negative.");
 
     generateReferenceString();
+  }
+
+  Process::~Process() {
+    stopThread();
+  }
+
+  void Process::startThread() {
+    if (!m_thread.joinable()) {
+      m_thread = std::thread(&Process::run, this);
+    }
+  }
+
+  void Process::stopThread() {
+    m_stopThread = true;
+    {
+      std::lock_guard<std::mutex> lock(m_processMutex);
+      m_running = true; // Wake up if sleeping
+    }
+    m_cvRun.notify_one();
+    
+    if (m_thread.joinable()) {
+      m_thread.join();
+    }
+  }
+
+  void Process::signalRun() {
+    {
+      std::lock_guard<std::mutex> lock(m_processMutex);
+      m_running = true;
+      m_tickCompleted = false; // Reset completion flag
+    }
+    m_cvRun.notify_one();
+  }
+
+  void Process::waitForTickCompletion() {
+    std::unique_lock<std::mutex> lock(m_processMutex);
+    m_cvKernel.wait(lock, [this] { return m_tickCompleted; });
+    // Tick is done, Kernel can proceed
+  }
+
+  void Process::run() {
+    while (!m_stopThread) {
+      // Wait for Kernel signal (Context Switch In)
+      std::unique_lock<std::mutex> lock(m_processMutex);
+      m_cvRun.wait(lock, [this] { return m_running || m_stopThread; });
+
+      if (m_stopThread) break;
+
+      // Execute one unit of work (CPU Tick)
+      bool burstFinished = executeOneTick();
+
+      // Notify Kernel (Context Switch Out / Yield)
+      m_running = false; // Go back to sleep next iteration
+      m_tickCompleted = true;
+      lock.unlock(); // Unlock before notify to avoid pessimistic locking
+      m_cvKernel.notify_one();
+    }
+  }
+
+  bool Process::executeOneTick() {
+    // Assumes lock is held by run()
+    if (m_bursts.empty()) return true;
+
+    Burst& current = m_bursts.front();
+    
+    // Safety check: Should generally be CPU burst here.
+    // IO handling logic is primarily managed by Simulator, 
+    // but the thread consumes the burst duration.
+    
+    current.duration--;
+    if (current.duration < 0) current.duration = 0;
+
+    // Advance internal IP only if it's a CPU burst
+    if (current.type == BurstType::CPU) {
+      advanceInstructionPointer();
+    }
+
+    return current.duration == 0;
   }
 
   int Process::getPid() const { return m_pid; }
@@ -24,18 +107,20 @@ namespace waos::core {
   int Process::getRequiredPages() const { return m_requiredPages; }
   int Process::getPriority() const { return m_priority; }
 
-  ProcessState Process::getState() const { return m_state; }
+  ProcessState Process::getState() const { return m_state.load(); }
 
   void Process::setState(ProcessState newState, uint64_t currentTime) {
-    if (m_state == newState) return; // No change
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    ProcessState oldState = m_state.load();
 
-    // Handle statistics based on state transitions
-    if (m_state == ProcessState::READY) {
-      // Exiting READY state, so calculate wait time
+    if (oldState == newState) return; // No change
+
+    // Stats logic needs mutex protection now
+    if (oldState == ProcessState::READY) {
       m_stats.totalWaitTime += (currentTime - m_stats.lastReadyTime);
     }
 
-    m_state = newState;
+    m_state.store(newState);
 
     // Handle statistics for the new state
     if (newState == ProcessState::READY) {
@@ -50,34 +135,29 @@ namespace waos::core {
   }
 
   BurstType Process::getCurrentBurstType() const {
+    std::lock_guard<std::mutex> lock(m_processMutex);
     if (m_bursts.empty()) return BurstType::CPU;
     return m_bursts.front().type;
   }
 
   int Process::getCurrentBurstDuration() const {
+    std::lock_guard<std::mutex> lock(m_processMutex);
     if (m_bursts.empty()) return 0;
     return m_bursts.front().duration;
   }
 
-  bool Process::updateCurrentBurst(int timeUnits) {
-    if (m_bursts.empty()) return true;
-
-    Burst& current = m_bursts.front();
-    current.duration -= timeUnits;
-    
-    if (current.duration < 0) current.duration = 0;
-    return current.duration == 0;
-  }
-
   void Process::advanceToNextBurst() {
+    std::lock_guard<std::mutex> lock(m_processMutex);
     if (!m_bursts.empty()) m_bursts.pop();
   }
 
   bool Process::hasMoreBursts() const {
+    std::lock_guard<std::mutex> lock(m_processMutex);
     return !m_bursts.empty();
   }
 
   void Process::generateReferenceString() {
+    // Generation happens in constructor (single thread context), no lock needed yet
     int totalCpuTicks = 0;
     // Temporal copy to iterate without destroying 
     std::queue<Burst> tempQueue = m_bursts;
@@ -110,6 +190,9 @@ namespace waos::core {
   }
 
   int Process::getCurrentPageRequirement() const {
+    // No lock needed if m_instructionPointer is only touched by owned thread or during init
+    // But for safety in getters:
+    std::lock_guard<std::mutex> lock(m_processMutex);
     if (m_instructionPointer < m_pageReferenceString.size()) {
       return m_pageReferenceString[m_instructionPointer];
     }
@@ -117,6 +200,7 @@ namespace waos::core {
   }
 
   void Process::advanceInstructionPointer() {
+    // Called internally by executeOneTick (already locked)
     if (m_instructionPointer < m_pageReferenceString.size()) {
       m_instructionPointer++;
     }
@@ -126,15 +210,45 @@ namespace waos::core {
     return m_pageReferenceString;
   }
 
-  int Process::getQuantumUsed() const { return m_quantumUsed; }
-  void Process::resetQuantum() { m_quantumUsed = 0; }
-  void Process::incrementQuantum(int ticks) { m_quantumUsed += ticks; }
+  int Process::getQuantumUsed() const {
+    // Atomic read could be enough, but using mutex for consistency
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    return m_quantumUsed;
+  }
 
-  const ProcessStats& Process::getStats() const { return m_stats; }
+  void Process::resetQuantum() {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    m_quantumUsed = 0;
+  }
 
-  void Process::addCpuTime(uint64_t time) { m_stats.totalCpuTime += time; }
-  void Process::addIoTime(uint64_t time) { m_stats.totalIoTime += time; }
-  void Process::incrementPageFaults() { m_stats.pageFaults++; }
-  void Process::incrementPreemptions() { m_stats.preemptions++; }
+  void Process::incrementQuantum(int ticks) {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    m_quantumUsed += ticks;
+  }
+
+  const ProcessStats& Process::getStats() const {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    return m_stats;
+  }
+
+  void Process::addCpuTime(uint64_t time) {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    m_stats.totalCpuTime += time;
+  }
+
+  void Process::addIoTime(uint64_t time) {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    m_stats.totalIoTime += time;
+  }
+
+  void Process::incrementPageFaults() {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    m_stats.pageFaults++;
+  }
+
+  void Process::incrementPreemptions() {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    m_stats.preemptions++;
+  }
 
 }
