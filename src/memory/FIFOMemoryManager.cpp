@@ -14,6 +14,8 @@ namespace waos::memory {
   }
 
   bool FIFOMemoryManager::isPageLoaded(int processId, int pageNumber) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return false;
 
@@ -25,6 +27,8 @@ namespace waos::memory {
   }
 
   PageRequestResult FIFOMemoryManager::requestPage(int processId, int pageNumber) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     // Page already loaded
     if (isPageLoaded(processId, pageNumber)) return PageRequestResult::HIT;
 
@@ -49,6 +53,8 @@ namespace waos::memory {
   }
 
   void FIFOMemoryManager::allocateForProcess(int processId, int requiredPages) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (m_pageTables.find(processId) != m_pageTables.end()) return;
 
     PageTable pageTable;
@@ -63,6 +69,8 @@ namespace waos::memory {
   }
 
   void FIFOMemoryManager::freeForProcess(int processId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return;
 
@@ -84,6 +92,8 @@ namespace waos::memory {
   }
 
   void FIFOMemoryManager::completePageLoad(int processId, int pageNumber) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return;
 
@@ -93,12 +103,28 @@ namespace waos::memory {
     }
   }
 
+  uint64_t FIFOMemoryManager::getPageFaults() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    return m_pageFaults;
+  }
+
+  uint64_t FIFOMemoryManager::getPageReplacements() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    return m_pageReplacements;
+  }
+
   int FIFOMemoryManager::getFreeFrames() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     return std::count_if(m_frames.begin(), m_frames.end(),
                          [](const Frame& f) { return f.isFree(); });
   }
 
   int FIFOMemoryManager::getActivePages(int processId) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) {
       return 0;

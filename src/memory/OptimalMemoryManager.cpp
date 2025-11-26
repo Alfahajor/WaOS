@@ -15,6 +15,8 @@ namespace waos::memory {
   }
 
   bool OptimalMemoryManager::isPageLoaded(int processId, int pageNumber) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return false;
 
@@ -26,6 +28,8 @@ namespace waos::memory {
   }
 
   PageRequestResult OptimalMemoryManager::requestPage(int processId, int pageNumber) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (isPageLoaded(processId, pageNumber)) return PageRequestResult::HIT;
 
     m_pageFaults++;
@@ -46,6 +50,8 @@ namespace waos::memory {
   }
 
   void OptimalMemoryManager::allocateForProcess(int processId, int requiredPages) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (m_pageTables.find(processId) != m_pageTables.end()) return;
 
     PageTable pageTable;
@@ -60,6 +66,8 @@ namespace waos::memory {
   }
 
   void OptimalMemoryManager::freeForProcess(int processId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return;
 
@@ -72,6 +80,8 @@ namespace waos::memory {
   }
 
   void OptimalMemoryManager::completePageLoad(int processId, int pageNumber) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return;
 
@@ -83,6 +93,8 @@ namespace waos::memory {
 
   void OptimalMemoryManager::registerFutureReferences(int processId, 
                                                        const std::vector<int>& referenceString) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     ProcessFutureReferences refs;
     refs.processId = processId;
     refs.futurePages = referenceString;
@@ -92,6 +104,8 @@ namespace waos::memory {
   }
 
   void OptimalMemoryManager::advanceInstructionPointer(int processId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_futureRefs.find(processId);
     if (it != m_futureRefs.end()) {
       if (it->second.currentIndex < it->second.futurePages.size()) {
@@ -100,12 +114,28 @@ namespace waos::memory {
     }
   }
 
+  uint64_t OptimalMemoryManager::getPageFaults() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    return m_pageFaults;
+  }
+
+  uint64_t OptimalMemoryManager::getPageReplacements() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    return m_pageReplacements;
+  }
+
   int OptimalMemoryManager::getFreeFrames() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     return std::count_if(m_frames.begin(), m_frames.end(),
                          [](const Frame& f) { return f.isFree(); });
   }
 
   int OptimalMemoryManager::getActivePages(int processId) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) {
       return 0;

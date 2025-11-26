@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <queue>
 #include <cstdint>
+#include <mutex> 
 
 namespace waos::memory {
 
@@ -37,12 +38,14 @@ namespace waos::memory {
     void completePageLoad(int processId, int pageNumber) override;
 
     // Statistics getters
-    uint64_t getPageFaults() const { return m_pageFaults; }
-    uint64_t getPageReplacements() const { return m_pageReplacements; }
+    uint64_t getPageFaults() const;
+    uint64_t getPageReplacements() const;
     int getFreeFrames() const;
     int getActivePages(int processId) const;
 
   private:
+    mutable std::mutex m_mutex;
+
     // Physical memory simulation
     std::vector<Frame> m_frames;          // Array of physical frames
     const uint64_t* m_clockRef;            // Pointer to simulation clock
