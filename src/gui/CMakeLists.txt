@@ -12,7 +12,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml)
 
 # GUI Library sources
 set(GUI_SOURCES
-    controllers/SimulationController.cpp
+    # controllers/SimulationController.cpp  # TODO: Create this file
     viewmodels/ProcessMonitorViewModel.cpp
     viewmodels/MemoryMonitorViewModel.cpp
     viewmodels/BlockingEventsViewModel.cpp

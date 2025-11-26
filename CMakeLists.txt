@@ -19,22 +19,22 @@ add_subdirectory(src/core)
 add_subdirectory(src/scheduler)
 add_subdirectory(src/memory)
 
-# GUI Module (Qt Quick)
-add_subdirectory(src/gui)
+# GUI Module (Qt Quick) - Temporarily commented for testing
+# add_subdirectory(src/gui)
 
-# Main executable for GUI application
-add_executable(waos_simulator
-  src/gui/main.cpp
-)
+# Main executable for GUI application - Temporarily commented
+# add_executable(waos_simulator
+#   src/gui/main.cpp
+# )
 
-target_link_libraries(waos_simulator PRIVATE
-  waos_core
-  waos_scheduler
-  waos_gui
-  Qt6::Core
-  Qt6::Quick
-  Qt6::Qml
-)
+# target_link_libraries(waos_simulator PRIVATE
+#   waos_core
+#   waos_scheduler
+#   waos_gui
+#   Qt6::Core
+#   Qt6::Quick
+#   Qt6::Qml
+# )
 
 # Enable CTest
 enable_testing()
