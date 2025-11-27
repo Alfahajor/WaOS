@@ -10,7 +10,7 @@
 #include "IScheduler.h"
 #include <queue>
 #include <mutex>
-#include <chrono>
+#include "waos/common/DataStructures.h"
 
 namespace waos::core {
     class Process;
@@ -36,10 +36,15 @@ public:
     bool hasReadyProcesses() const override;
     int getTimeSlice() const override;
 
+    std::vector<const waos::core::Process*> peekReadyQueue() const override;
+    std::string getAlgorithmName() const override;
+    waos::common::SchedulerMetrics getSchedulerMetrics() const override;
+
 private:
     int m_quantum;
     mutable std::mutex m_mutex;
     std::queue<waos::core::Process*> m_queue;
+    waos::common::SchedulerMetrics m_metrics;
 };
 
 }

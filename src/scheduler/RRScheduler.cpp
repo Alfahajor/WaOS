@@ -1,8 +1,12 @@
 #include "waos/scheduler/RRScheduler.h"
 #include "waos/core/Process.h"
-#include <iostream>
 
 namespace waos::scheduler {
+
+RRScheduler::RRScheduler(int quantum) : m_quantum(quantum) {
+    if (m_quantum <= 0) m_quantum = 4; // Fallback seguro
+    m_metrics.totalSchedulingDecisions = 0;
+}
 
 void RRScheduler::addProcess(waos::core::Process* p) {
     if (!p) return;
@@ -16,6 +20,9 @@ waos::core::Process* RRScheduler::getNextProcess() {
 
     waos::core::Process* p = m_queue.front();
     m_queue.pop();
+
+    m_metrics.totalSchedulingDecisions++;
+    m_metrics.selectionCount[p->getPid()]++;
 
     // Stub: do not requeue. Real RR logic will requeue if not finished.
     // TODO: Implement proper Round Robin scheduling with:
@@ -33,5 +40,26 @@ bool RRScheduler::hasReadyProcesses() const {
 }
 
 int RRScheduler::getTimeSlice() const { return m_quantum; }
+
+std::vector<const waos::core::Process*> RRScheduler::peekReadyQueue() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<const waos::core::Process*> result;
+    
+    std::queue<waos::core::Process*> temp = m_queue;
+    while (!temp.empty()) {
+        result.push_back(temp.front());
+        temp.pop();
+    }
+    return result;
+}
+
+std::string RRScheduler::getAlgorithmName() const {
+    return "Round Robin (Q=" + std::to_string(m_quantum) + ")";
+}
+
+waos::common::SchedulerMetrics RRScheduler::getSchedulerMetrics() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_metrics;
+}
 
 }

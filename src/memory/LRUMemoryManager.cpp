@@ -6,10 +6,13 @@
 namespace waos::memory {
 
   LRUMemoryManager::LRUMemoryManager(int totalFrames, const uint64_t* clockRef)
-    : m_frames(totalFrames),
-      m_clockRef(clockRef),
-      m_pageFaults(0),
-      m_pageReplacements(0) {
+    : m_frames(totalFrames), m_clockRef(clockRef) {
+    m_stats.totalFrames = totalFrames;
+    m_stats.usedFrames = 0;
+    m_stats.totalPageFaults = 0;
+    m_stats.totalReplacements = 0;
+    m_stats.hitRatio = 0.0;
+
     if (totalFrames <= 0) throw std::invalid_argument("Total frames must be positive");
     if (!clockRef) throw std::invalid_argument("Clock reference cannot be null");
   }
@@ -30,13 +33,18 @@ namespace waos::memory {
   PageRequestResult LRUMemoryManager::requestPage(int processId, int pageNumber) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    // Page hit - update access time for LRU
-    if (isPageLoaded(processId, pageNumber)) {
-      updateAccessTime(processId, pageNumber);
-      return PageRequestResult::HIT;
+    auto it = m_pageTables.find(processId);
+    if (it != m_pageTables.end()) {
+      auto pageIt = it->second.find(pageNumber);
+      if (pageIt != it->second.end() && pageIt->second.isLoaded()) {
+        updateAccessTime(processId, pageNumber);
+        m_totalHits++;
+        return PageRequestResult::HIT;
+      }
     }
 
-    m_pageFaults++;
+    m_stats.totalPageFaults++;
+    m_stats.faultsPerProcess[processId]++;
 
     // Try to find a free frame
     int frameIndex = findFreeFrame();
@@ -49,7 +57,7 @@ namespace waos::memory {
     frameIndex = selectVictimFrame();
     evictFrame(frameIndex);
     loadPageIntoFrame(processId, pageNumber, frameIndex);
-    m_pageReplacements++;
+    m_stats.totalReplacements++;
     
     return PageRequestResult::REPLACEMENT;
   }
@@ -78,7 +86,10 @@ namespace waos::memory {
     if (it == m_pageTables.end()) return;
 
     for (Frame& frame : m_frames) {
-      if (frame.pid == processId) frame.reset();
+      if (frame.pid == processId) {
+        frame.reset();
+        m_stats.usedFrames--;
+      }
     }
 
     m_pageTables.erase(it);
@@ -101,36 +112,51 @@ namespace waos::memory {
     }
   }
 
-  int LRUMemoryManager::getFreeFrames() const {
+  std::vector<waos::common::FrameInfo> LRUMemoryManager::getFrameStatus() const {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    return std::count_if(m_frames.begin(), m_frames.end(),
-                         [](const Frame& f) { return f.isFree(); });
-  }
-
-  uint64_t LRUMemoryManager::getPageFaults() const {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    return m_pageFaults;
-  }
-
-  uint64_t LRUMemoryManager::getPageReplacements() const {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    return m_pageReplacements;
-  }
-
-  int LRUMemoryManager::getActivePages(int processId) const {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    auto it = m_pageTables.find(processId);
-    if (it == m_pageTables.end()) {
-      return 0;
+    std::vector<waos::common::FrameInfo> result;
+    for(int i=0; i < m_frames.size(); ++i) {
+        waos::common::FrameInfo info;
+        info.frameId = i;
+        info.isOccupied = m_frames[i].occupied;
+        info.ownerPid = m_frames[i].pid;
+        info.pageNumber = m_frames[i].pageNumber;
+        info.loadedAtTick = m_frames[i].loadTime;
+        result.push_back(info);
     }
+    return result;
+  }
 
-    const PageTable& pageTable = it->second;
-    return std::count_if(pageTable.begin(), pageTable.end(),
-                         [](const auto& pair) { return pair.second.isLoaded(); });
+  std::vector<waos::common::PageTableEntryInfo> LRUMemoryManager::getPageTableForProcess(int processId) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    std::vector<waos::common::PageTableEntryInfo> result;
+    auto it = m_pageTables.find(processId);
+    if (it != m_pageTables.end()) {
+      for(const auto& pair : it->second) {
+        waos::common::PageTableEntryInfo info;
+        info.pageNumber = pair.first;
+        info.frameNumber = pair.second.frameNumber;
+        info.present = pair.second.present;
+        info.referenced = pair.second.referenced;
+        info.modified = pair.second.modified;
+        result.push_back(info);
+      }
+    }
+    return result;
+  }
+
+  waos::common::MemoryStats LRUMemoryManager::getMemoryStats() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    // Calcular Hit Ratio al vuelo
+    waos::common::MemoryStats currentStats = m_stats;
+    uint64_t totalAccesses = m_stats.totalPageFaults + m_totalHits;
+    currentStats.hitRatio = (totalAccesses > 0) ? (double)m_totalHits / totalAccesses : 0.0;
+    return currentStats;
+  }
+
+  std::string LRUMemoryManager::getAlgorithmName() const {
+    return "LRU (Least Recently Used)";
   }
 
   int LRUMemoryManager::findFreeFrame() const {
@@ -152,6 +178,7 @@ namespace waos::memory {
     // Update page table entry
     PageTableEntry& entry = m_pageTables[processId][pageNumber];
     entry.load(frameIndex, *m_clockRef);
+    m_stats.usedFrames++;
   }
 
   int LRUMemoryManager::selectVictimFrame() {
@@ -174,6 +201,7 @@ namespace waos::memory {
 
     PageTableEntry& entry = m_pageTables[frame.pid][frame.pageNumber];
     entry.evict();
+    m_stats.usedFrames--;
   }
 
   void LRUMemoryManager::updateAccessTime(int processId, int pageNumber) {

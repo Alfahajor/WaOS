@@ -62,6 +62,25 @@ namespace waos::core {
     // Tick is done, Kernel can proceed
   }
 
+  bool Process::simulateIoWait(int ticks) {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    
+    if (m_bursts.empty()) return true;
+    
+    Burst& current = m_bursts.front();
+    
+    // Solo actuar si es una ráfaga de E/S
+    if (current.type == BurstType::IO) {
+      current.duration -= ticks;
+      if (current.duration < 0) current.duration = 0;
+      
+      // Retorna true si el temporizador llegó a 0 (E/S completada)
+      return current.duration == 0;
+    }
+    
+    return false; // No era E/S o no terminó
+  }
+
   void Process::run() {
     while (!m_stopThread) {
       // Wait for Kernel signal (Context Switch In)
@@ -71,7 +90,7 @@ namespace waos::core {
       if (m_stopThread) break;
 
       // Execute one unit of work (CPU Tick)
-      bool burstFinished = executeOneTick();
+      executeOneTick();
 
       // Notify Kernel (Context Switch Out / Yield)
       m_running = false; // Go back to sleep next iteration
@@ -87,15 +106,9 @@ namespace waos::core {
 
     Burst& current = m_bursts.front();
     
-    // Safety check: Should generally be CPU burst here.
-    // IO handling logic is primarily managed by Simulator, 
-    // but the thread consumes the burst duration.
-    
-    current.duration--;
-    if (current.duration < 0) current.duration = 0;
-
-    // Advance internal IP only if it's a CPU burst
     if (current.type == BurstType::CPU) {
+      current.duration--;
+      if (current.duration < 0) current.duration = 0;
       advanceInstructionPointer();
     }
 
@@ -106,6 +119,11 @@ namespace waos::core {
   uint64_t Process::getArrivalTime() const { return m_arrivalTime; }
   int Process::getRequiredPages() const { return m_requiredPages; }
   int Process::getPriority() const { return m_priority; }
+
+  ProcessStats Process::getStats() const {
+    std::lock_guard<std::mutex> lock(m_processMutex);
+    return m_stats;
+  }
 
   ProcessState Process::getState() const { return m_state.load(); }
 
@@ -224,11 +242,6 @@ namespace waos::core {
   void Process::incrementQuantum(int ticks) {
     std::lock_guard<std::mutex> lock(m_processMutex);
     m_quantumUsed += ticks;
-  }
-
-  const ProcessStats& Process::getStats() const {
-    std::lock_guard<std::mutex> lock(m_processMutex);
-    return m_stats;
   }
 
   void Process::addCpuTime(uint64_t time) {

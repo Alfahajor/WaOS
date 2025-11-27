@@ -70,11 +70,10 @@ namespace waos::memory {
      */
     void advanceInstructionPointer(int processId) override;
 
-    // Statistics getters
-    uint64_t getPageFaults() const;
-    uint64_t getPageReplacements() const;
-    int getFreeFrames() const;
-    int getActivePages(int processId) const;
+    std::vector<waos::common::FrameInfo> getFrameStatus() const override;
+    std::vector<waos::common::PageTableEntryInfo> getPageTableForProcess(int processId) const override;
+    waos::common::MemoryStats getMemoryStats() const override;
+    std::string getAlgorithmName() const override;
 
   private:
     mutable std::mutex m_mutex;
@@ -89,9 +88,8 @@ namespace waos::memory {
     // Future references for optimal decision-making
     std::unordered_map<int, ProcessFutureReferences> m_futureRefs;
     
-    // Statistics
-    uint64_t m_pageFaults;
-    uint64_t m_pageReplacements;
+    waos::common::MemoryStats m_stats;
+    uint64_t m_totalHits = 0;
 
     /**
      * @brief Finds a free frame in physical memory.
