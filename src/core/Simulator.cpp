@@ -324,7 +324,6 @@ namespace waos::core {
 
     // Post-Execution Kernel Accounting
     m_runningProcess->addCpuTime(1);
-    m_runningProcess->advanceInstructionPointer();
     m_runningProcess->incrementQuantum(1);
 
     // Advance instruction pointer in memory manager (for optimal algorithm)
