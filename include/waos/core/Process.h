@@ -13,6 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <string>
 
 namespace waos::core {
 
@@ -113,7 +114,8 @@ namespace waos::core {
     int getPriority() const; // Lower value = Higher priority
 
     ProcessState getState() const;
-    void setState(ProcessState newState, uint64_t currentTime);
+    ProcessStats getStats() const;
+
 
     /**
      * @brief Gets the type of the current burst (CPU or IO).
@@ -132,6 +134,14 @@ namespace waos::core {
     bool hasMoreBursts() const;
 
     /**
+     * @brief Simula el paso del tiempo durante una operación de E/S.
+     *
+     * @param ticks Cantidad de tiempo a descontar del temporizador.
+     * @return true si la operación de E/S ha finalizado (temporizador llegó a 0).
+     */
+    bool simulateIoWait(int ticks);
+
+    /**
      * @brief Gets the page number the process needs to access in the current CPU tick.
      * @return The virtual page number (0 to requiredPages - 1).
      */
@@ -148,9 +158,8 @@ namespace waos::core {
     void resetQuantum();
     void incrementQuantum(int ticks); // Used by Kernel to track preemption
 
-    const ProcessStats& getStats() const;
-
     // Stat updaters (Thread-Safe or called by Kernel)
+    void setState(ProcessState newState, uint64_t currentTime);
     void addCpuTime(uint64_t time);
     void addIoTime(uint64_t time);
     void incrementPageFaults();
