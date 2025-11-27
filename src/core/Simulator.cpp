@@ -409,6 +409,10 @@ namespace waos::core {
     // If next is null, handleScheduling will run next tick or same tick if called before
   }
 
+  uint64_t Simulator::getCurrentTime() const { return m_clock.getTime(); }
+
+  bool Simulator::isRunning() const { return m_isRunning; }
+
   void Simulator::updateMetrics() {
     m_metrics.currentTick = m_clock.getTime();
     m_metrics.totalProcesses = m_processes.size();
@@ -495,9 +499,5 @@ namespace waos::core {
     if (m_memoryManager) return m_memoryManager->getAlgorithmName();
     return "None";
   }
-
-  uint64_t Simulator::getCurrentTime() const { return m_clock.getTime(); }
-
-  bool Simulator::isRunning() const { return m_isRunning; }
 
 }

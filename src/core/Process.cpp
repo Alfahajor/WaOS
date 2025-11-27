@@ -7,13 +7,13 @@ namespace waos::core {
 
   Process::Process(int pid, uint64_t arrivalTime, int priority, std::queue<Burst> bursts, int requiredPages)
     : m_pid(pid),
-      m_priority(priority),
-      m_state(ProcessState::NEW),
       m_arrivalTime(arrivalTime),
+      m_priority(priority),
       m_bursts(std::move(bursts)),
       m_requiredPages(requiredPages),
-      m_instructionPointer(0),
       m_quantumUsed(0),
+      m_state(ProcessState::NEW),
+      m_instructionPointer(0),
       m_running(false),
       m_tickCompleted(false),
       m_stopThread(false) {
@@ -117,8 +117,8 @@ namespace waos::core {
 
   int Process::getPid() const { return m_pid; }
   uint64_t Process::getArrivalTime() const { return m_arrivalTime; }
-  int Process::getRequiredPages() const { return m_requiredPages; }
   int Process::getPriority() const { return m_priority; }
+  int Process::getRequiredPages() const { return m_requiredPages; }
 
   ProcessStats Process::getStats() const {
     std::lock_guard<std::mutex> lock(m_processMutex);
@@ -177,7 +177,7 @@ namespace waos::core {
   void Process::generateReferenceString() {
     // Generation happens in constructor (single thread context), no lock needed yet
     int totalCpuTicks = 0;
-    // Temporal copy to iterate without destroying 
+
     std::queue<Burst> tempQueue = m_bursts;
     while(!tempQueue.empty()) {
       Burst b = tempQueue.front();

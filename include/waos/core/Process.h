@@ -110,21 +110,13 @@ namespace waos::core {
 
     int getPid() const;
     uint64_t getArrivalTime() const;
-    int getRequiredPages() const;
     int getPriority() const; // Lower value = Higher priority
+    int getRequiredPages() const;
 
-    ProcessState getState() const;
     ProcessStats getStats() const;
+    ProcessState getState() const;
 
-
-    /**
-     * @brief Gets the type of the current burst (CPU or IO).
-     */
     BurstType getCurrentBurstType() const;
-
-    /**
-     * @brief Gets the remaining duration of the current burst.
-     */
     int getCurrentBurstDuration() const;
 
     /**
@@ -156,7 +148,7 @@ namespace waos::core {
     // Quantum Management
     int getQuantumUsed() const;
     void resetQuantum();
-    void incrementQuantum(int ticks); // Used by Kernel to track preemption
+    void incrementQuantum(int ticks);
 
     // Stat updaters (Thread-Safe or called by Kernel)
     void setState(ProcessState newState, uint64_t currentTime);
@@ -167,17 +159,14 @@ namespace waos::core {
 
   private:
     int m_pid;
-    int m_priority;
-    std::atomic<ProcessState> m_state; // Atomic for thread safety
-
     uint64_t m_arrivalTime;
-
-    // Protected by m_processMutex
+    int m_priority;
     std::queue<Burst> m_bursts;
+    int m_requiredPages;
 
     int m_quantumUsed;
-    int m_requiredPages;
     ProcessStats m_stats;
+    std::atomic<ProcessState> m_state; // Atomic for thread safety
 
     // Memory Simulation Internal Data
     std::vector<int> m_pageReferenceString;
@@ -185,7 +174,7 @@ namespace waos::core {
 
     // Threading Infrastructure
     std::thread m_thread;
-    mutable std::mutex m_processMutex;     // Protects shared data
+    mutable std::mutex m_processMutex;
     std::condition_variable m_cvRun;       // Wait for Kernel signal (Dispatch)
     std::condition_variable m_cvKernel;    // Notify Kernel (Yield/Done)
 
@@ -205,7 +194,6 @@ namespace waos::core {
      */
     bool executeOneTick();
 
-    // Generates a deterministic sequence of page references based on locality.
     void generateReferenceString();
     void advanceInstructionPointer();
   };
