@@ -81,7 +81,7 @@ void test_fcfs_sequential_arrivals() {
     Simulator sim;
     
     // Load test processes
-    std::string mockFile = "../../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes from " << mockFile << std::endl;
         assert(false);
@@ -122,7 +122,7 @@ void test_fcfs_with_io() {
 
     Simulator sim;
     
-    std::string mockFile = "../../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes" << std::endl;
         assert(false);
@@ -165,7 +165,7 @@ void test_fcfs_full_simulation() {
 
     Simulator sim;
     
-    std::string mockFile = "../../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes" << std::endl;
         assert(false);
