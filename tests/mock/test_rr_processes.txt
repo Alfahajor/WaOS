@@ -1,0 +1,32 @@
+# Test processes for Round Robin Scheduler Integration
+# Format: PID ArrivalTime Bursts Priority RequiredPages
+# RR uses time quantum to preempt and fairly distribute CPU time
+
+# Test Case 1: Processes with equal arrival time and longer bursts (test quantum preemption)
+P1 0 CPU(10) 1 2
+P2 0 CPU(8) 1 2
+P3 0 CPU(6) 1 2
+
+# Test Case 2: Processes with short bursts (complete before quantum expires)
+P4 10 CPU(2) 1 2
+P5 10 CPU(3) 1 2
+P6 10 CPU(4) 1 2
+
+# Test Case 3: Mix of long and short bursts (demonstrates fairness)
+P7 20 CPU(15) 1 2
+P8 20 CPU(5) 1 2
+P9 22 CPU(7) 1 2
+
+# Test Case 4: Processes with I/O operations (CPU-I/O-CPU pattern)
+P10 30 CPU(8),E/S(3),CPU(6) 1 2
+P11 30 CPU(5),E/S(2),CPU(4) 1 2
+
+# Test Case 5: Staggered arrivals with varying burst lengths
+P12 40 CPU(12) 1 3
+P13 42 CPU(3) 1 2
+P14 44 CPU(9) 1 2
+P15 46 CPU(4) 1 2
+
+# Test Case 6: Multiple I/O phases (complex burst pattern)
+P16 50 CPU(4),E/S(2),CPU(5),E/S(1),CPU(3) 1 3
+P17 52 CPU(6) 1 2
