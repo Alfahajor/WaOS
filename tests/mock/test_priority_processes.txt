@@ -1,0 +1,30 @@
+# Test processes for Priority Scheduler Integration
+# Format: PID ArrivalTime Bursts Priority RequiredPages
+# Lower priority value = Higher priority (0 is highest)
+
+# Test Case 1: Same arrival time, different priorities
+P1 0 CPU(5) 3 2
+P2 0 CPU(4) 1 2
+P3 0 CPU(6) 2 2
+
+# Test Case 2: High priority process arrives late
+P4 10 CPU(3) 0 2
+P5 10 CPU(8) 2 2
+
+# Test Case 3: Priority preemption demonstration
+P6 15 CPU(10) 3 2
+P7 18 CPU(4) 1 2
+
+# Test Case 4: Equal priority (FIFO within same priority)
+P8 20 CPU(5) 2 2
+P9 20 CPU(4) 2 2
+P10 20 CPU(3) 2 2
+
+# Test Case 5: Mix with I/O operations
+P11 30 CPU(6),E/S(2),CPU(4) 1 2
+P12 30 CPU(5) 3 2
+
+# Test Case 6: Starvation risk (low priority process)
+P13 35 CPU(8) 5 3
+P14 37 CPU(3) 1 2
+P15 39 CPU(2) 0 2
