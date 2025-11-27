@@ -12,7 +12,12 @@ namespace waos::core {
       m_runningProcess(nullptr),
       m_nextProcess(nullptr),
       m_contextSwitchCounter(0),
-      m_isRunning(false) {
+      m_cpuActiveTicks(0),
+      m_totalPageFaults(0),
+      m_totalContextSwitches(0),
+      m_isRunning(false),
+      m_pageFaultPenalty(5),
+      m_contextSwitchDuration(1) {
   }
 
   Simulator::~Simulator() {
@@ -34,6 +39,11 @@ namespace waos::core {
       m_nextProcess = nullptr;
       m_contextSwitchCounter = 0;
 
+      // Reset Metrics accumulators
+      m_cpuActiveTicks = 0;
+      m_totalPageFaults = 0;
+      m_totalContextSwitches = 0;
+
       // Convert ProcessInfo (DTO) to Process (Entity)
       for (const auto& info : processInfos) {
         auto process = std::make_unique<Process>(
@@ -54,7 +64,10 @@ namespace waos::core {
       // Sort incoming processes by arrival time for efficiency
       std::sort(m_incomingProcesses.begin(), m_incomingProcesses.end(),
                 [](Process* a, Process* b) {
-                  return a->getArrivalTime() < b->getArrivalTime();
+                  if (a->getArrivalTime() != b->getArrivalTime()) {
+                    return a->getArrivalTime() < b->getArrivalTime();
+                  }
+                  return a->getPid() < b->getPid();
                 });
 
       emit logMessage(QString("Loaded %1 processes from file.").arg(m_processes.size()));
@@ -96,11 +109,27 @@ namespace waos::core {
 
   void Simulator::reset() {
     stop();
+
+    for (auto& process : m_processes) {
+      if (process) {
+        process->stopThread(); // Joins the thread
+      }
+    }
+
     m_runningProcess = nullptr;
     m_nextProcess = nullptr;
     m_contextSwitchCounter = 0;
     m_blockedQueue.clear();
     m_memoryWaitQueue.clear(); 
+
+    // Reset Metrics
+    m_cpuActiveTicks = 0;
+    m_totalPageFaults = 0;
+    m_totalContextSwitches = 0;
+    m_metrics = waos::common::SimulatorMetrics();
+
+    m_processes.clear(); 
+    m_incomingProcesses.clear();
 
     // Re-create processes or reset logic would be needed here for full reset
     emit logMessage("Simulation reset.");
@@ -110,10 +139,6 @@ namespace waos::core {
     if (!m_isRunning) return;
     step();
   }
-
-  uint64_t Simulator::getCurrentTime() const { return m_clock.getTime(); }
-
-  bool Simulator::isRunning() const { return m_isRunning; }
 
   void Simulator::step() {
     std::lock_guard<std::mutex> lock(m_simulationMutex);
@@ -139,7 +164,6 @@ namespace waos::core {
         m_nextProcess = nullptr;
 
         m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-        m_runningProcess->resetQuantum(); // Reset Quantum on restore
 
         emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
         emit logMessage(QString("Context Switch complete. Running P%1").arg(m_runningProcess->getPid()));
@@ -152,27 +176,9 @@ namespace waos::core {
       if (m_runningProcess == nullptr && m_contextSwitchCounter == 0) handleScheduling();
     }
 
-    m_clock.tick();
+    updateMetrics();
 
-    // Check for termination condition
-    // Simplificado: si no hay procesos activos, parar
-    if (m_incomingProcesses.empty() && m_blockedQueue.empty() && 
-      m_memoryWaitQueue.empty() && m_runningProcess == nullptr &&
-      m_nextProcess == nullptr && !m_scheduler->hasReadyProcesses()) {
-       // O verificar si todos los m_processes están TERMINATED
-       bool allTerminated = true;
-       for(const auto& p : m_processes) {
-         if (p->getState() != ProcessState::TERMINATED) {
-           allTerminated = false;
-           break;
-         }
-       }
-       if (allTerminated) {
-         m_isRunning = false;
-         emit simulationFinished();
-         emit logMessage("All processes finished.");
-       }
-    }
+    m_clock.tick();
   }
 
   void Simulator::handleArrivals() {
@@ -224,11 +230,14 @@ namespace waos::core {
 
       // Thread is conceptually blocked. Kernel updates the PCB state.
       // We manually decrement burst duration here because the thread is paused.
-      bool burstFinished = p->updateCurrentBurst(1);
+      bool burstFinished = p->simulateIoWait(1);
       p->addIoTime(1);
 
       if (burstFinished) {
         p->advanceToNextBurst();
+
+        // Reset Quantum on I/O Completion (New scheduler eligibility)
+        p->resetQuantum();
 
         // Back to READY
         p->setState(ProcessState::READY,m_clock.getTime());
@@ -261,6 +270,9 @@ namespace waos::core {
         // Esto actualiza la PageTableEntry a 'present = true'.
         m_memoryManager->completePageLoad(info.process->getPid(), info.pageNumber);
         
+        // Reset Quantum on Fault Resolution (New scheduler eligibility)
+        info.process->resetQuantum();
+
         info.process->setState(ProcessState::READY, m_clock.getTime());
         emit processStateChanged(info.process->getPid(), ProcessState::READY);
         m_scheduler->addProcess(info.process);
@@ -284,23 +296,26 @@ namespace waos::core {
           .arg(m_runningProcess->getPid()).arg(pageRequired));
 
       m_runningProcess->incrementPageFaults();
+      m_totalPageFaults++;
       m_memoryManager->requestPage(m_runningProcess->getPid(), pageRequired);
 
       m_runningProcess->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
       emit processStateChanged(m_runningProcess->getPid(), ProcessState::WAITING_MEMORY);
 
-      m_memoryWaitQueue.push_back({m_runningProcess, PAGE_FAULT_PENALTY, pageRequired});
+      m_memoryWaitQueue.push_back({m_runningProcess, m_pageFaultPenalty, pageRequired});
       m_runningProcess = nullptr; // Immediate yield on fault
       return; // Tick used for the faulting instruction attempt
     }
 
     // ORCHESTRATION: Wake up the thread
-    // Instead of calling updateCurrentBurst directly, we signal the thread.
-    m_runningProcess->signalRun();
+    m_systemMonitor.dispatch(m_runningProcess);
 
     // BARRIER: Wait for the thread to finish its tick logic
     // This ensures the thread actually executed its instruction cycle.
-    m_runningProcess->waitForTickCompletion();
+    m_systemMonitor.waitForBurstCompletion(m_runningProcess);
+
+    // If we reached here, the process successfully executed one tick of CPU burst.
+    m_cpuActiveTicks++;
 
     // Post-Execution Kernel Accounting
     m_runningProcess->addCpuTime(1);
@@ -359,7 +374,8 @@ namespace waos::core {
 
     // Initiate Context Switch
     m_nextProcess = candidate;
-    m_contextSwitchCounter = CONTEXT_SWITCH_DURATION;
+    m_contextSwitchCounter = m_contextSwitchDuration;
+    m_totalContextSwitches++;
 
     // We do NOT set state to RUNNING yet.
     // It remains READY until CS is done in step().
@@ -368,6 +384,9 @@ namespace waos::core {
 
   void Simulator::triggerContextSwitch(Process* current, Process* next) {
     if (current) {
+      // Reset Quantum on Preemption/Yield (Returning to Ready)
+      current->resetQuantum();
+
       current->setState(ProcessState::READY, m_clock.getTime());
       emit processStateChanged(current->getPid(), ProcessState::READY);
       m_scheduler->addProcess(current);
@@ -378,8 +397,101 @@ namespace waos::core {
     // Otherwise, set running to null so handleScheduling picks one
     if (next) {
       m_nextProcess = next;
-      m_contextSwitchCounter = CONTEXT_SWITCH_DURATION;
+      m_contextSwitchCounter = m_contextSwitchDuration;
+      m_totalContextSwitches++;
     }
     // If next is null, handleScheduling will run next tick or same tick if called before
   }
+
+  void Simulator::updateMetrics() {
+    m_metrics.currentTick = m_clock.getTime();
+    m_metrics.totalProcesses = m_processes.size();
+
+    m_metrics.totalPageFaults = m_totalPageFaults;
+    m_metrics.totalContextSwitches = m_totalContextSwitches;
+
+    // Calculate CPU Utilization
+    if (m_metrics.currentTick > 0) {
+      m_metrics.cpuUtilization = (double)m_cpuActiveTicks / m_metrics.currentTick * 100.0;
+    } else {
+      m_metrics.cpuUtilization = 0.0;
+    }
+
+    // Process-specific stats still require iteration, but simpler logic
+    m_metrics.completedProcesses = 0;
+    double totalWait = 0;
+    double totalTurnaround = 0;
+
+    for(const auto& p : m_processes) {
+      if (p->getState() == ProcessState::TERMINATED) {
+        auto stats = p->getStats();
+        m_metrics.completedProcesses++;
+        totalWait += stats.totalWaitTime;
+        totalTurnaround += (stats.finishTime - p->getArrivalTime());
+      }
+    }
+
+    if (m_metrics.completedProcesses > 0) {
+      m_metrics.avgWaitTime = totalWait / m_metrics.completedProcesses;
+      m_metrics.avgTurnaroundTime = totalTurnaround / m_metrics.completedProcesses;
+    } else {
+      m_metrics.avgWaitTime = 0.0;
+      m_metrics.avgTurnaroundTime = 0.0;
+    }
+  }
+
+  // APIs to GUI
+  std::vector<const Process*> Simulator::getAllProcesses() const {
+    std::lock_guard<std::mutex> lock(m_simulationMutex);
+    std::vector<const Process*> result;
+    for(const auto& p : m_processes) result.push_back(p.get());
+    return result;
+  }
+
+  const Process* Simulator::getRunningProcess() const {
+    std::lock_guard<std::mutex> lock(m_simulationMutex);
+    return m_runningProcess;
+  }
+
+  std::vector<const Process*> Simulator::getBlockedProcesses() const {
+    std::lock_guard<std::mutex> lock(m_simulationMutex);
+    std::vector<const Process*> result;
+    for(const auto* p : m_blockedQueue) result.push_back(p);
+    return result;
+  }
+
+  std::vector<waos::common::MemoryWaitInfo> Simulator::getMemoryWaitQueue() const {
+    std::lock_guard<std::mutex> lock(m_simulationMutex);
+    std::vector<waos::common::MemoryWaitInfo> result;
+    for(const auto& item : m_memoryWaitQueue) {
+      result.push_back({item.process->getPid(), item.pageNumber, item.ticksRemaining});
+    }
+    return result;
+  }
+
+  std::vector<const Process*> Simulator::getReadyProcesses() const {
+    std::lock_guard<std::mutex> lock(m_simulationMutex);
+    if (m_scheduler) return m_scheduler->peekReadyQueue();
+    return {};
+  }
+
+  waos::common::SimulatorMetrics Simulator::getSimulatorMetrics() const {
+    std::lock_guard<std::mutex> lock(m_simulationMutex);
+    return m_metrics;
+  }
+
+  std::string Simulator::getSchedulerAlgorithmName() const {
+    if (m_scheduler) return m_scheduler->getAlgorithmName();
+    return "None";
+  }
+
+  std::string Simulator::getMemoryAlgorithmName() const {
+    if (m_memoryManager) return m_memoryManager->getAlgorithmName();
+    return "None";
+  }
+
+  uint64_t Simulator::getCurrentTime() const { return m_clock.getTime(); }
+
+  bool Simulator::isRunning() const { return m_isRunning; }
+
 }
