@@ -1,7 +1,8 @@
 /**
- * @brief Integration test for FCFS Scheduler with Simulator
- * @details Tests the FCFS scheduling algorithm integrated with the full Simulator,
- *          including process arrivals, CPU execution, and I/O operations.
+ * @brief Integration test for Priority Scheduler with Simulator
+ * @details Tests the Priority scheduling algorithm integrated with the full Simulator.
+ *          Priority scheduling selects the process with the highest priority (lowest value).
+ *          Processes with the same priority are scheduled in FIFO order.
  */
 
 #include <iostream>
@@ -9,8 +10,9 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
+#include <map>
 #include "waos/core/Simulator.h"
-#include "waos/scheduler/FCFSScheduler.h"
+#include "waos/scheduler/PriorityScheduler.h"
 #include "waos/memory/IMemoryManager.h"
 
 using namespace waos::core;
@@ -71,24 +73,24 @@ public:
 };
 
 /**
- * @brief Test FCFS scheduling with sequential arrivals
+ * @brief Test Priority scheduling with different priority levels
  */
-void test_fcfs_sequential_arrivals() {
+void test_priority_levels() {
     std::cout << "\n╔══════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  Test 1: FCFS Sequential Arrivals                  ║" << std::endl;
+    std::cout << "║  Test 1: Priority Levels (0=highest)               ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
 
     Simulator sim;
     
     // Load test processes
-    std::string mockFile = "../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_priority_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes from " << mockFile << std::endl;
         assert(false);
     }
 
-    // Setup FCFS scheduler
-    auto scheduler = std::make_unique<FCFSScheduler>();
+    // Setup Priority scheduler
+    auto scheduler = std::make_unique<PriorityScheduler>();
     sim.setScheduler(std::move(scheduler));
 
     // Setup mock memory manager (silent)
@@ -97,38 +99,79 @@ void test_fcfs_sequential_arrivals() {
 
     // Start simulation
     sim.start();
-    std::cout << "Simulation started - Observing FCFS behavior\n" << std::endl;
+    std::cout << "Simulation started - Observing Priority behavior\n" << std::endl;
     std::cout << std::string(70, '=') << std::endl;
 
-    // Run simulation for limited ticks to observe FCFS behavior
-    int maxTicks = 60;
+    // Track initial burst duration for each process
+    std::map<int, int> processBurstInitial;
+    std::map<int, int> lastSeenBurstRemaining;
+    
+    // Run simulation for limited ticks to observe priority behavior
+    int maxTicks = 40;
     for (int tick = 0; tick < maxTicks && sim.isRunning(); tick++) {
         uint64_t currentTime = sim.getCurrentTime();
+        
         std::cout << "\n[Tick " << std::setw(3) << currentTime << "]" << std::endl;
+        
         sim.tick();
+        
+        // Get current running process and show status
+        const Process* running = sim.getRunningProcess();
+        if (running) {
+            int burstRemaining = running->getCurrentBurstDuration();
+            int pid = running->getPid();
+            int priority = running->getPriority();
+            
+            // Detect if this is a new burst
+            bool isNewBurst = false;
+            if (lastSeenBurstRemaining.find(pid) != lastSeenBurstRemaining.end()) {
+                if (burstRemaining > lastSeenBurstRemaining[pid]) {
+                    isNewBurst = true;
+                }
+            } else {
+                isNewBurst = true;
+            }
+            
+            // Update burst tracking
+            if (isNewBurst) {
+                processBurstInitial[pid] = burstRemaining;
+            }
+            
+            lastSeenBurstRemaining[pid] = burstRemaining;
+            
+            // Calculate execution progress
+            int burstInitial = processBurstInitial[pid];
+            int burstExecuted = burstInitial - burstRemaining;
+            
+            std::cout << "  → Running: P" << pid 
+                      << " (Priority=" << priority << ")"
+                      << " | Burst=" << burstExecuted << "/" << burstInitial 
+                      << " (remaining=" << burstRemaining << ")";
+            std::cout << std::endl;
+        }
     }
 
     std::cout << "\n" << std::string(70, '=') << std::endl;
-    std::cout << "[PASSED] ✓ FCFS Sequential Arrivals Test\n" << std::endl;
+    std::cout << "[PASSED] ✓ Priority Levels Test\n" << std::endl;
 }
 
 /**
- * @brief Test FCFS with processes that have I/O operations
+ * @brief Test Priority with I/O operations
  */
-void test_fcfs_with_io() {
+void test_priority_with_io() {
     std::cout << "\n╔══════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  Test 2: FCFS with I/O Operations                  ║" << std::endl;
+    std::cout << "║  Test 2: Priority with I/O Operations              ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
 
     Simulator sim;
     
-    std::string mockFile = "../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_priority_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes" << std::endl;
         assert(false);
     }
 
-    auto scheduler = std::make_unique<FCFSScheduler>();
+    auto scheduler = std::make_unique<PriorityScheduler>();
     sim.setScheduler(std::move(scheduler));
 
     auto memory = std::make_unique<MockMemoryManager>();
@@ -152,26 +195,26 @@ void test_fcfs_with_io() {
     }
 
     std::cout << "\n" << std::string(70, '=') << std::endl;
-    std::cout << "[PASSED] ✓ FCFS with I/O Test\n" << std::endl;
+    std::cout << "[PASSED] ✓ Priority with I/O Test\n" << std::endl;
 }
 
 /**
- * @brief Test FCFS with complete simulation
+ * @brief Test Priority with complete simulation
  */
-void test_fcfs_full_simulation() {
+void test_priority_full_simulation() {
     std::cout << "\n╔══════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  Test 3: FCFS Full Simulation                      ║" << std::endl;
+    std::cout << "║  Test 3: Priority Full Simulation                  ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
 
     Simulator sim;
     
-    std::string mockFile = "../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_priority_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes" << std::endl;
         assert(false);
     }
 
-    auto scheduler = std::make_unique<FCFSScheduler>();
+    auto scheduler = std::make_unique<PriorityScheduler>();
     sim.setScheduler(std::move(scheduler));
 
     auto memory = std::make_unique<MockMemoryManager>();
@@ -200,7 +243,7 @@ void test_fcfs_full_simulation() {
     if (!sim.isRunning()) {
         std::cout << "✅ Simulation completed!" << std::endl;
         std::cout << "   Duration: " << (endTime - startTime) << " ticks" << std::endl;
-        std::cout << "[PASSED] ✓ FCFS Full Simulation\n" << std::endl;
+        std::cout << "[PASSED] ✓ Priority Full Simulation\n" << std::endl;
     } else {
         std::cout << "⚠️  Reached max ticks (" << maxTicks << ")" << std::endl;
         std::cout << "[WARNING] May need more ticks\n" << std::endl;
@@ -209,15 +252,15 @@ void test_fcfs_full_simulation() {
 
 int main() {
     std::cout << "\n╔══════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  FCFS Scheduler + Simulator Integration     ║" << std::endl;
+    std::cout << "║  Priority Scheduler + Simulator Tests       ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════╝\n" << std::endl;
 
     try {
-        test_fcfs_sequential_arrivals();
-        test_fcfs_with_io();
-        test_fcfs_full_simulation();
+        test_priority_levels();
+        test_priority_with_io();
+        test_priority_full_simulation();
 
-        std::cout << "\n✅ All FCFS integration tests passed!\n" << std::endl;
+        std::cout << "\n✅ All Priority integration tests passed!\n" << std::endl;
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "\n❌ Test failed with exception: " << e.what() << std::endl;

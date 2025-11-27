@@ -1,7 +1,7 @@
 /**
- * @brief Integration test for FCFS Scheduler with Simulator
- * @details Tests the FCFS scheduling algorithm integrated with the full Simulator,
- *          including process arrivals, CPU execution, and I/O operations.
+ * @brief Integration test for Round Robin Scheduler with Simulator
+ * @details Tests the RR scheduling algorithm integrated with the full Simulator,
+ *          including quantum preemption, process arrivals, CPU execution, and I/O operations.
  */
 
 #include <iostream>
@@ -9,8 +9,9 @@
 #include <memory>
 #include <iomanip>
 #include <sstream>
+#include <map>
 #include "waos/core/Simulator.h"
-#include "waos/scheduler/FCFSScheduler.h"
+#include "waos/scheduler/RRScheduler.h"
 #include "waos/memory/IMemoryManager.h"
 
 using namespace waos::core;
@@ -71,24 +72,24 @@ public:
 };
 
 /**
- * @brief Test FCFS scheduling with sequential arrivals
+ * @brief Test RR scheduling with quantum preemption
  */
-void test_fcfs_sequential_arrivals() {
+void test_rr_quantum_preemption() {
     std::cout << "\n╔══════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  Test 1: FCFS Sequential Arrivals                  ║" << std::endl;
+    std::cout << "║  Test 1: RR Quantum Preemption (q=5)               ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
 
     Simulator sim;
     
     // Load test processes
-    std::string mockFile = "../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_rr_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes from " << mockFile << std::endl;
         assert(false);
     }
 
-    // Setup FCFS scheduler
-    auto scheduler = std::make_unique<FCFSScheduler>();
+    // Setup RR scheduler with quantum = 5
+    auto scheduler = std::make_unique<RRScheduler>(5);
     sim.setScheduler(std::move(scheduler));
 
     // Setup mock memory manager (silent)
@@ -97,38 +98,87 @@ void test_fcfs_sequential_arrivals() {
 
     // Start simulation
     sim.start();
-    std::cout << "Simulation started - Observing FCFS behavior\n" << std::endl;
+    std::cout << "Simulation started - Observing RR behavior with Quantum=5\n" << std::endl;
+    std::cout << "Legend: Q=quantum used | Burst=executed/total (remaining)\n" << std::endl;
     std::cout << std::string(70, '=') << std::endl;
 
-    // Run simulation for limited ticks to observe FCFS behavior
-    int maxTicks = 60;
+    // Track initial burst duration for each process (per burst, not per quantum)
+    std::map<int, int> processBurstInitial;
+    std::map<int, int> lastSeenBurstRemaining;
+    
+    // Run simulation for limited ticks to observe quantum preemption
+    int maxTicks = 40;
     for (int tick = 0; tick < maxTicks && sim.isRunning(); tick++) {
         uint64_t currentTime = sim.getCurrentTime();
+        
         std::cout << "\n[Tick " << std::setw(3) << currentTime << "]" << std::endl;
+        
         sim.tick();
+        
+        // Get current running process and show quantum status AFTER tick
+        const Process* running = sim.getRunningProcess();
+        if (running) {
+            int quantumUsed = running->getQuantumUsed();
+            int burstRemaining = running->getCurrentBurstDuration();
+            int pid = running->getPid();
+            
+            // Detect if this is a new burst (burst duration increased/reset from last time)
+            bool isNewBurst = false;
+            if (lastSeenBurstRemaining.find(pid) != lastSeenBurstRemaining.end()) {
+                // If remaining increased, it's a new burst
+                if (burstRemaining > lastSeenBurstRemaining[pid]) {
+                    isNewBurst = true;
+                }
+            } else {
+                // First time seeing this process
+                isNewBurst = true;
+            }
+            
+            // Update or initialize burst tracking
+            if (isNewBurst) {
+                // Calculate original burst size: remaining + already used
+                processBurstInitial[pid] = burstRemaining + quantumUsed;
+            }
+            
+            lastSeenBurstRemaining[pid] = burstRemaining;
+            
+            // Calculate how much of the burst has been executed
+            int burstInitial = processBurstInitial[pid];
+            int burstExecuted = burstInitial - burstRemaining;
+            
+            std::cout << "  → Running: P" << pid 
+                      << " | Q=" << quantumUsed << "/5"
+                      << " | Burst=" << burstExecuted << "/" << burstInitial 
+                      << " (remaining=" << burstRemaining << ")";
+            
+            if (quantumUsed >= 5) {
+                std::cout << " ⚠ Quantum full!";
+            }
+            std::cout << std::endl;
+        }
     }
 
     std::cout << "\n" << std::string(70, '=') << std::endl;
-    std::cout << "[PASSED] ✓ FCFS Sequential Arrivals Test\n" << std::endl;
+    std::cout << "[PASSED] ✓ RR Quantum Preemption Test\n" << std::endl;
 }
 
 /**
- * @brief Test FCFS with processes that have I/O operations
+ * @brief Test RR with processes that have I/O operations
  */
-void test_fcfs_with_io() {
+void test_rr_with_io() {
     std::cout << "\n╔══════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  Test 2: FCFS with I/O Operations                  ║" << std::endl;
+    std::cout << "║  Test 2: RR with I/O Operations (q=5)              ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
 
     Simulator sim;
     
-    std::string mockFile = "../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_rr_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes" << std::endl;
         assert(false);
     }
 
-    auto scheduler = std::make_unique<FCFSScheduler>();
+    auto scheduler = std::make_unique<RRScheduler>(5);
     sim.setScheduler(std::move(scheduler));
 
     auto memory = std::make_unique<MockMemoryManager>();
@@ -152,26 +202,26 @@ void test_fcfs_with_io() {
     }
 
     std::cout << "\n" << std::string(70, '=') << std::endl;
-    std::cout << "[PASSED] ✓ FCFS with I/O Test\n" << std::endl;
+    std::cout << "[PASSED] ✓ RR with I/O Test\n" << std::endl;
 }
 
 /**
- * @brief Test FCFS with complete simulation
+ * @brief Test RR with complete simulation
  */
-void test_fcfs_full_simulation() {
+void test_rr_full_simulation() {
     std::cout << "\n╔══════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  Test 3: FCFS Full Simulation                      ║" << std::endl;
+    std::cout << "║  Test 3: RR Full Simulation (q=5)                  ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════════════╝\n" << std::endl;
 
     Simulator sim;
     
-    std::string mockFile = "../../../tests/mock/test_processes.txt";
+    std::string mockFile = "../../../tests/mock/test_rr_processes.txt";
     if (!sim.loadProcesses(mockFile)) {
         std::cerr << "ERROR: Could not load processes" << std::endl;
         assert(false);
     }
 
-    auto scheduler = std::make_unique<FCFSScheduler>();
+    auto scheduler = std::make_unique<RRScheduler>(5);
     sim.setScheduler(std::move(scheduler));
 
     auto memory = std::make_unique<MockMemoryManager>();
@@ -200,7 +250,7 @@ void test_fcfs_full_simulation() {
     if (!sim.isRunning()) {
         std::cout << "✅ Simulation completed!" << std::endl;
         std::cout << "   Duration: " << (endTime - startTime) << " ticks" << std::endl;
-        std::cout << "[PASSED] ✓ FCFS Full Simulation\n" << std::endl;
+        std::cout << "[PASSED] ✓ RR Full Simulation\n" << std::endl;
     } else {
         std::cout << "⚠️  Reached max ticks (" << maxTicks << ")" << std::endl;
         std::cout << "[WARNING] May need more ticks\n" << std::endl;
@@ -209,15 +259,15 @@ void test_fcfs_full_simulation() {
 
 int main() {
     std::cout << "\n╔══════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  FCFS Scheduler + Simulator Integration     ║" << std::endl;
+    std::cout << "║  RR Scheduler + Simulator Integration       ║" << std::endl;
     std::cout << "╚══════════════════════════════════════════════╝\n" << std::endl;
 
     try {
-        test_fcfs_sequential_arrivals();
-        test_fcfs_with_io();
-        test_fcfs_full_simulation();
+        test_rr_quantum_preemption();
+        test_rr_with_io();
+        test_rr_full_simulation();
 
-        std::cout << "\n✅ All FCFS integration tests passed!\n" << std::endl;
+        std::cout << "\n✅ All RR integration tests passed!\n" << std::endl;
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "\n❌ Test failed with exception: " << e.what() << std::endl;

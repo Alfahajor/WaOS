@@ -81,6 +81,7 @@ namespace waos::core {
     // Getters for validation in tests
     uint64_t getCurrentTime() const;
     bool isRunning() const;
+    const Process* getRunningProcess() const;
 
   signals:
 

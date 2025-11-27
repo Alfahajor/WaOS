@@ -114,6 +114,8 @@ namespace waos::core {
 
   bool Simulator::isRunning() const { return m_isRunning; }
 
+  const Process* Simulator::getRunningProcess() const { return m_runningProcess; }
+
   void Simulator::step() {
     std::lock_guard<std::mutex> lock(m_simulationMutex);
 
