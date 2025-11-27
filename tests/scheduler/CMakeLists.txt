@@ -30,3 +30,14 @@ target_link_libraries(test_rr_simulator PRIVATE
 )
 
 add_test(NAME RRSimulatorIntegration COMMAND test_rr_simulator)
+
+# Priority + Simulator Integration Test
+add_executable(test_priority_simulator test_priority_simulator.cpp)
+
+target_link_libraries(test_priority_simulator PRIVATE
+  scheduler
+  core
+  Qt6::Core
+)
+
+add_test(NAME PrioritySimulatorIntegration COMMAND test_priority_simulator)
