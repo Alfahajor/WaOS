@@ -161,6 +161,9 @@ namespace waos::core {
 
     // Internal helper to refresh metric struct
     void updateMetrics();
+
+    // Returns true if I/O burst finished in this step
+    bool processIoStep(Process* p);
   };
 
 }

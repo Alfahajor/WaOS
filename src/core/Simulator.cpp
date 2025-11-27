@@ -22,8 +22,7 @@ namespace waos::core {
 
   Simulator::~Simulator() {
     // Ensure all threads are stopped on destruction
-    stop();
-    m_processes.clear(); // Trigger Process destructors to join threads
+    reset();
   }
 
   bool Simulator::loadProcesses(const std::string& filePath) {
@@ -128,10 +127,10 @@ namespace waos::core {
     m_totalContextSwitches = 0;
     m_metrics = waos::common::SimulatorMetrics();
 
+    // Clear main container (Destructors will run, but threads are already joined)
     m_processes.clear(); 
     m_incomingProcesses.clear();
 
-    // Re-create processes or reset logic would be needed here for full reset
     emit logMessage("Simulation reset.");
   }
 
@@ -177,7 +176,6 @@ namespace waos::core {
     }
 
     updateMetrics();
-
     m_clock.tick();
   }
 
@@ -221,6 +219,16 @@ namespace waos::core {
     }
   }
 
+  bool Simulator::processIoStep(Process* p) {
+    if (!p) return false;
+
+    // Thread is blocked. We manually decrement burst duration.
+    bool burstFinished = p->simulateIoWait(1);
+    p->addIoTime(1);
+
+    return burstFinished;
+  }
+
   void Simulator::handleIO() {
     // IO handling remains simulated in kernel space for simplicity
     // and determinism, even with threaded processes. The thread is sleeping.
@@ -230,8 +238,7 @@ namespace waos::core {
 
       // Thread is conceptually blocked. Kernel updates the PCB state.
       // We manually decrement burst duration here because the thread is paused.
-      bool burstFinished = p->simulateIoWait(1);
-      p->addIoTime(1);
+      bool burstFinished = processIoStep(p);
 
       if (burstFinished) {
         p->advanceToNextBurst();
@@ -263,14 +270,13 @@ namespace waos::core {
       
       // Simular tiempo de disco para cargar la página
       info.ticksRemaining--;
-      info.process->addIoTime(1); // Contamos espera de disco como IO Time
+      if (info.process) info.process->addIoTime(1); // Count disk wait as IO Time
 
       if (info.ticksRemaining <= 0) {
-        // Notificar al MemoryManager que la carga física ha terminado.
-        // Esto actualiza la PageTableEntry a 'present = true'.
+        // Notify to MemoryManager que la carga física is finished.
         m_memoryManager->completePageLoad(info.process->getPid(), info.pageNumber);
         
-        // Reset Quantum on Fault Resolution (New scheduler eligibility)
+        // Reset Quantum on Fault Resolution
         info.process->resetQuantum();
 
         info.process->setState(ProcessState::READY, m_clock.getTime());
@@ -311,7 +317,6 @@ namespace waos::core {
     m_systemMonitor.dispatch(m_runningProcess);
 
     // BARRIER: Wait for the thread to finish its tick logic
-    // This ensures the thread actually executed its instruction cycle.
     m_systemMonitor.waitForBurstCompletion(m_runningProcess);
 
     // If we reached here, the process successfully executed one tick of CPU burst.
@@ -370,15 +375,17 @@ namespace waos::core {
   void Simulator::handleScheduling() {
     if (!m_scheduler->hasReadyProcesses()) return;
     Process* candidate = m_scheduler->getNextProcess();
-    if (!candidate) return;
+
+    if (!candidate) {
+      emit logMessage("Warning: Scheduler returned null despite reporting ready processes.");
+      return;
+    }
 
     // Initiate Context Switch
     m_nextProcess = candidate;
     m_contextSwitchCounter = m_contextSwitchDuration;
     m_totalContextSwitches++;
 
-    // We do NOT set state to RUNNING yet.
-    // It remains READY until CS is done in step().
     emit logMessage(QString("Scheduler selected P%1. Switching context...").arg(candidate->getPid()));
   }
 
