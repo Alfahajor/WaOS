@@ -156,6 +156,7 @@ namespace waos::core {
     void addIoTime(uint64_t time);
     void incrementPageFaults();
     void incrementPreemptions();
+    void advanceInstructionPointer();
 
   private:
     int m_pid;
@@ -195,7 +196,6 @@ namespace waos::core {
     bool executeOneTick();
 
     void generateReferenceString();
-    void advanceInstructionPointer();
   };
 
 }
