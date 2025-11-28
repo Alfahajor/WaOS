@@ -27,7 +27,7 @@ namespace waos::scheduler {
  */
 class SJFScheduler : public IScheduler {
 public:
-    SJFScheduler() = default;
+    SJFScheduler();
     ~SJFScheduler() override = default;
 
     void addProcess(waos::core::Process* p) override;

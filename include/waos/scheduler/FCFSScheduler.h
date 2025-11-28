@@ -24,7 +24,7 @@ namespace waos::scheduler {
  */
 class FCFSScheduler : public IScheduler {
 public:
-    FCFSScheduler() = default;
+    FCFSScheduler();
     ~FCFSScheduler() override = default;
 
     void addProcess(waos::core::Process* p) override;

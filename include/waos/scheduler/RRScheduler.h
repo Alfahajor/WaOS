@@ -26,8 +26,7 @@ namespace waos::scheduler {
  */
 class RRScheduler : public IScheduler {
 public:
-    explicit RRScheduler(int quantum = 5)
-        : m_quantum(quantum) {}
+    explicit RRScheduler(int quantum = 5);
 
     ~RRScheduler() override = default;
 

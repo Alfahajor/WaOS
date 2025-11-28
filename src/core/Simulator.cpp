@@ -2,6 +2,8 @@
 #include "waos/core/Parser.h"
 #include <waos/scheduler/IScheduler.h>
 #include <waos/memory/IMemoryManager.h>
+#include "waos/common/DataStructures.h"
+
 #include <iostream>
 #include <algorithm>
 
@@ -266,7 +268,7 @@ namespace waos::core {
     // Kernel simulates disk latency.
     auto it = m_memoryWaitQueue.begin();
     while (it != m_memoryWaitQueue.end()) {
-      MemoryWaitInfo& info = *it;
+      InternalMemoryWait& info = *it;
       
       // Simular tiempo de disco para cargar la página
       info.ticksRemaining--;
