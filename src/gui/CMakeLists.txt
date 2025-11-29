@@ -12,27 +12,33 @@ find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml)
 
 # GUI Library sources
 set(GUI_SOURCES
-    # controllers/SimulationController.cpp  # TODO: Create this file
+    controllers/SimulationController.cpp
     viewmodels/ProcessMonitorViewModel.cpp
     viewmodels/MemoryMonitorViewModel.cpp
-    viewmodels/BlockingEventsViewModel.cpp
-    viewmodels/GanttViewModel.cpp
+    # viewmodels/BlockingEventsViewModel.cpp
+    # viewmodels/GanttViewModel.cpp
     models/ProcessItemModel.cpp
     models/FrameItemModel.cpp
-    models/EventItemModel.cpp
+    # models/EventItemModel.cpp
     mock/MockDataProvider.cpp
+    mock/MockScheduler.cpp
+    mock/MockMemoryManager.cpp
+    mock/MockSimulator.cpp
 )
 
 set(GUI_HEADERS
     controllers/SimulationController.h
     viewmodels/ProcessMonitorViewModel.h
     viewmodels/MemoryMonitorViewModel.h
-    viewmodels/BlockingEventsViewModel.h
-    viewmodels/GanttViewModel.h
+    # viewmodels/BlockingEventsViewModel.h
+    # viewmodels/GanttViewModel.h
     models/ProcessItemModel.h
     models/FrameItemModel.h
-    models/EventItemModel.h
+    # models/EventItemModel.h
     mock/MockDataProvider.h
+    mock/MockScheduler.h
+    mock/MockMemoryManager.h
+    mock/MockSimulator.h
 )
 
 # QML Resources

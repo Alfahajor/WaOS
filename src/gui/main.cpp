@@ -10,6 +10,10 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
+#include "controllers/SimulationController.h"
+#include "viewmodels/MemoryMonitorViewModel.h"
+#include "viewmodels/ProcessMonitorViewModel.h"
+
 // Controllers and ViewModels will be registered here
 
 int main(int argc, char* argv[]) {
@@ -21,9 +25,19 @@ int main(int argc, char* argv[]) {
 
   QQmlApplicationEngine engine;
 
-  // TODO: Register custom types when implemented
-  // qmlRegisterType<SimulationController>("WaOS", 1, 0, "SimulationController");
-  // qmlRegisterType<ProcessMonitorViewModel>("WaOS", 1, 0, "ProcessMonitorViewModel");
+  // Instantiate Controller and ViewModels
+  auto* controller = new waos::gui::controllers::SimulationController(&app);
+  auto* processVM = new waos::gui::viewmodels::ProcessMonitorViewModel(&app);
+  auto* memoryVM = new waos::gui::viewmodels::MemoryMonitorViewModel(&app);
+
+  // Link them
+  controller->registerProcessViewModel(processVM);
+  controller->registerMemoryViewModel(memoryVM);
+
+  // Register as context properties (Global objects in QML)
+  engine.rootContext()->setContextProperty("simulationController", controller);
+  engine.rootContext()->setContextProperty("processViewModel", processVM);
+  engine.rootContext()->setContextProperty("memoryViewModel", memoryVM);
 
   // Load main QML
   const QUrl url(QStringLiteral("qrc:/main.qml"));

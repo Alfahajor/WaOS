@@ -35,21 +35,10 @@ ApplicationWindow {
                 }
             }
             
-            // Control Panel (placeholder)
-            Rectangle {
+            // Control Panel
+            ControlPanel {
                 Layout.fillWidth: true
-                height: 120
-                color: "white"
-                border.color: "#90A4AE"
-                border.width: 2
-                radius: 5
-                
-                Text {
-                    anchors.centerIn: parent
-                    text: "Panel de Control (En desarrollo)"
-                    font.pixelSize: 16
-                    color: "#757575"
-                }
+                Layout.preferredHeight: 80
             }
             
             // Main Content Area with Tabs
@@ -74,48 +63,21 @@ ApplicationWindow {
                 currentIndex: tabBar.currentIndex
                 
                 // Panel de Planificación
-                Rectangle {
-                    color: "white"
-                    border.color: "#BDBDBD"
-                    border.width: 1
-                    
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Panel de Planificación\n(Placeholder - Implementación en progreso)"
-                        horizontalAlignment: Text.AlignHCenter
-                        font.pixelSize: 18
-                        color: "#757575"
-                    }
+                ProcessMonitor {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                 }
                 
                 // Panel de Memoria
-                Rectangle {
-                    color: "white"
-                    border.color: "#BDBDBD"
-                    border.width: 1
-                    
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Panel de Memoria\n(Placeholder - Implementación en progreso)"
-                        horizontalAlignment: Text.AlignHCenter
-                        font.pixelSize: 18
-                        color: "#757575"
-                    }
+                MemoryMonitor {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                 }
                 
                 // Panel de Bloqueos
-                Rectangle {
-                    color: "white"
-                    border.color: "#BDBDBD"
-                    border.width: 1
-                    
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Panel de Bloqueos\n(Placeholder - Implementación en progreso)"
-                        horizontalAlignment: Text.AlignHCenter
-                        font.pixelSize: 18
-                        color: "#757575"
-                    }
+                BlockingPanel {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                 }
             }
             
