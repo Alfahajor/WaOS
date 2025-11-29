@@ -17,6 +17,8 @@
 // Controllers and ViewModels will be registered here
 
 int main(int argc, char* argv[]) {
+  Q_INIT_RESOURCE(resources);
+
   QGuiApplication app(argc, argv);
 
   app.setOrganizationName("UNSA");

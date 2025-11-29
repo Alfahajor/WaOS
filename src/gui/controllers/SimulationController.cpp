@@ -1,79 +1,66 @@
 #include "SimulationController.h"
 
-#include "waos/memory/FIFOMemoryManager.h"
-#include "waos/memory/LRUMemoryManager.h"
-#include "waos/memory/OptimalMemoryManager.h"
-#include "waos/scheduler/FCFSScheduler.h"
-#include "waos/scheduler/PriorityScheduler.h"
-#include "waos/scheduler/RRScheduler.h"
-#include "waos/scheduler/SJFScheduler.h"
-
 namespace waos::gui::controllers {
 
-SimulationController::SimulationController(QObject* parent)
-    : QObject(parent), m_simulator(std::make_unique<waos::core::Simulator>()) {
+SimulationController::SimulationController(QObject* parent) 
+    : QObject(parent)
+    , m_simulator(std::make_unique<waos::gui::mock::MockSimulator>())
+    , m_timer(new QTimer(this))
+{
+    connect(m_timer, &QTimer::timeout, this, &SimulationController::onTimeout);
 }
 
-void SimulationController::loadProcesses(const QString& filePath) {
-  if (!m_simulator->loadProcesses(filePath.toStdString())) {
-    emit errorOccurred("Failed to load processes from " + filePath);
-  }
+void SimulationController::start() {
+    m_simulator->start();
+    m_timer->start(m_tickInterval);
+    emit isRunningChanged();
 }
 
-void SimulationController::startSimulation() {
-  m_simulator->start();
-  emit isRunningChanged();
+void SimulationController::stop() {
+    m_simulator->stop();
+    m_timer->stop();
+    emit isRunningChanged();
 }
 
-void SimulationController::pauseSimulation() {
-  m_simulator->stop();
-  emit isRunningChanged();
+void SimulationController::reset() {
+    stop();
+    m_simulator->reset();
 }
 
-void SimulationController::resetSimulation() {
-  m_simulator->reset();
-  emit simulationReset();
-  emit isRunningChanged();
-}
-
-void SimulationController::setScheduler(const QString& type, int quantum) {
-  std::unique_ptr<waos::scheduler::IScheduler> scheduler;
-  if (type == "FCFS") {
-    scheduler = std::make_unique<waos::scheduler::FCFSScheduler>();
-  } else if (type == "RR") {
-    scheduler = std::make_unique<waos::scheduler::RRScheduler>(quantum);
-  } else if (type == "SJF") {
-    scheduler = std::make_unique<waos::scheduler::SJFScheduler>();
-  } else if (type == "Priority") {
-    scheduler = std::make_unique<waos::scheduler::PriorityScheduler>();
-  }
-
-  if (scheduler) {
-    m_simulator->setScheduler(std::move(scheduler));
-  }
-}
-
-void SimulationController::setMemoryManager(const QString& type, int totalFrames) {
-  std::unique_ptr<waos::memory::IMemoryManager> memoryManager;
-  if (type == "FIFO") {
-    memoryManager = std::make_unique<waos::memory::FIFOMemoryManager>(totalFrames);
-  } else if (type == "LRU") {
-    memoryManager = std::make_unique<waos::memory::LRUMemoryManager>(totalFrames);
-  } else if (type == "Optimal") {
-    memoryManager = std::make_unique<waos::memory::OptimalMemoryManager>(totalFrames);
-  }
-
-  if (memoryManager) {
-    m_simulator->setMemoryManager(std::move(memoryManager));
-  }
+void SimulationController::step() {
+    m_simulator->tick();
 }
 
 bool SimulationController::isRunning() const {
-  return m_simulator->isRunning();
+    return m_timer->isActive();
 }
 
-waos::core::Simulator* SimulationController::getSimulator() const {
-  return m_simulator.get();
+int SimulationController::tickInterval() const {
+    return m_tickInterval;
 }
 
-}  // namespace waos::gui::controllers
+void SimulationController::setTickInterval(int interval) {
+    if (m_tickInterval != interval) {
+        m_tickInterval = interval;
+        m_timer->setInterval(m_tickInterval);
+        emit tickIntervalChanged();
+    }
+}
+
+void SimulationController::registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm) {
+    if (vm) {
+        vm->setSimulator(m_simulator.get());
+    }
+}
+
+void SimulationController::registerMemoryViewModel(waos::gui::viewmodels::MemoryMonitorViewModel* vm) {
+    if (vm) {
+        vm->setSimulator(m_simulator.get());
+    }
+}
+
+void SimulationController::onTimeout() {
+    m_simulator->tick();
+}
+
+} // namespace waos::gui::controllers

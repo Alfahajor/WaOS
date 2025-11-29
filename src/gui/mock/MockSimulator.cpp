@@ -19,15 +19,13 @@ void MockSimulator::reset() {
 }
 
 void MockSimulator::tick() {
-  if (!m_isRunning) return;
-
-  m_currentTick++;
-  m_processes = MockDataProvider::generateProcessList(m_currentTick);
-
-  emit clockTicked(m_currentTick);
-}
-
-std::vector<const waos::core::Process*> MockSimulator::getAllProcesses() const {
+    // if (!m_isRunning) return; // Allow manual ticking
+    
+    m_currentTick++;
+    m_processes = MockDataProvider::generateProcessList(m_currentTick);
+    
+    emit clockTicked(m_currentTick);
+}std::vector<const waos::core::Process*> MockSimulator::getAllProcesses() const {
   std::vector<const waos::core::Process*> result;
   for (const auto& p : m_processes) {
     result.push_back(p.get());
