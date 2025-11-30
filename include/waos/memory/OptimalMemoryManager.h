@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
+#include <mutex>
 
 namespace waos::memory {
 
@@ -69,13 +70,14 @@ namespace waos::memory {
      */
     void advanceInstructionPointer(int processId) override;
 
-    // Statistics getters
-    uint64_t getPageFaults() const { return m_pageFaults; }
-    uint64_t getPageReplacements() const { return m_pageReplacements; }
-    int getFreeFrames() const;
-    int getActivePages(int processId) const;
+    std::vector<waos::common::FrameInfo> getFrameStatus() const override;
+    std::vector<waos::common::PageTableEntryInfo> getPageTableForProcess(int processId) const override;
+    waos::common::MemoryStats getMemoryStats() const override;
+    std::string getAlgorithmName() const override;
 
   private:
+    mutable std::mutex m_mutex;
+
     // Physical memory simulation
     std::vector<Frame> m_frames;          // Array of physical frames
     const uint64_t* m_clockRef;            // Pointer to simulation clock
@@ -86,9 +88,8 @@ namespace waos::memory {
     // Future references for optimal decision-making
     std::unordered_map<int, ProcessFutureReferences> m_futureRefs;
     
-    // Statistics
-    uint64_t m_pageFaults;
-    uint64_t m_pageReplacements;
+    waos::common::MemoryStats m_stats;
+    uint64_t m_totalHits = 0;
 
     /**
      * @brief Finds a free frame in physical memory.

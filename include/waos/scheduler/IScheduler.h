@@ -9,6 +9,8 @@
 
 #include <vector>
 #include <memory>
+#include <string>
+#include "waos/common/DataStructures.h"
 
 namespace waos::core {
   class Process; // forward declaration
@@ -57,6 +59,22 @@ namespace waos::scheduler {
      * @return Positive integer for Quantum, or -1 for infinite (no timer preemption).
      */
     virtual int getTimeSlice() const = 0;
+
+    /**
+     * @brief Observa la cola de procesos listos SIN removerlos.
+     * Crucial para que la GUI muestre la cola "Ready" sin afectar la simulación.
+     */
+    virtual std::vector<const waos::core::Process*> peekReadyQueue() const = 0;
+
+    /**
+     * @brief Obtiene el nombre del algoritmo (ej: "Round Robin", "FCFS").
+     */
+    virtual std::string getAlgorithmName() const = 0;
+
+    /**
+     * @brief Obtiene métricas internas del planificador.
+     */
+    virtual waos::common::SchedulerMetrics getSchedulerMetrics() const = 0;
   };
 
 }

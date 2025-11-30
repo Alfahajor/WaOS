@@ -5,15 +5,20 @@
 namespace waos::memory {
 
   FIFOMemoryManager::FIFOMemoryManager(int totalFrames, const uint64_t* clockRef)
-    : m_frames(totalFrames),
-      m_clockRef(clockRef),
-      m_pageFaults(0),
-      m_pageReplacements(0) {
+    : m_frames(totalFrames), m_clockRef(clockRef) {
+    m_stats.totalFrames = totalFrames;
+    m_stats.usedFrames = 0;
+    m_stats.totalPageFaults = 0;
+    m_stats.totalReplacements = 0;
+    m_stats.hitRatio = 0.0;
+
     if (totalFrames <= 0) throw std::invalid_argument("Total frames must be positive");
     if (!clockRef) throw std::invalid_argument("Clock reference cannot be null");
   }
 
   bool FIFOMemoryManager::isPageLoaded(int processId, int pageNumber) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return false;
 
@@ -25,10 +30,13 @@ namespace waos::memory {
   }
 
   PageRequestResult FIFOMemoryManager::requestPage(int processId, int pageNumber) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     // Page already loaded
     if (isPageLoaded(processId, pageNumber)) return PageRequestResult::HIT;
 
-    m_pageFaults++;
+    m_stats.totalPageFaults++;
+    m_stats.faultsPerProcess[processId]++;
 
     // Try to find a free frame
     int frameIndex = findFreeFrame();
@@ -43,12 +51,14 @@ namespace waos::memory {
     evictFrame(frameIndex);
     loadPageIntoFrame(processId, pageNumber, frameIndex);
     m_loadQueue.push({processId, pageNumber});
-    m_pageReplacements++;
+    m_stats.totalReplacements++;
     
     return PageRequestResult::REPLACEMENT;
   }
 
   void FIFOMemoryManager::allocateForProcess(int processId, int requiredPages) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (m_pageTables.find(processId) != m_pageTables.end()) return;
 
     PageTable pageTable;
@@ -63,12 +73,17 @@ namespace waos::memory {
   }
 
   void FIFOMemoryManager::freeForProcess(int processId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return;
 
     // Free all frames used by this process
     for (Frame& frame : m_frames) {
-      if (frame.pid == processId) frame.reset();
+      if (frame.pid == processId) {
+        frame.reset();
+        m_stats.usedFrames--;
+      }
     }
 
     // Remove from FIFO queue
@@ -84,6 +99,8 @@ namespace waos::memory {
   }
 
   void FIFOMemoryManager::completePageLoad(int processId, int pageNumber) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     auto it = m_pageTables.find(processId);
     if (it == m_pageTables.end()) return;
 
@@ -93,20 +110,48 @@ namespace waos::memory {
     }
   }
 
-  int FIFOMemoryManager::getFreeFrames() const {
-    return std::count_if(m_frames.begin(), m_frames.end(),
-                         [](const Frame& f) { return f.isFree(); });
+  std::vector<waos::common::FrameInfo> FIFOMemoryManager::getFrameStatus() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    std::vector<waos::common::FrameInfo> result;
+    for(int i=0; i < m_frames.size(); ++i) {
+      waos::common::FrameInfo info;
+      info.frameId = i;
+      info.isOccupied = m_frames[i].occupied;
+      info.ownerPid = m_frames[i].pid;
+      info.pageNumber = m_frames[i].pageNumber;
+      info.loadedAtTick = m_frames[i].loadTime;
+      result.push_back(info);
+    }
+    return result;
   }
 
-  int FIFOMemoryManager::getActivePages(int processId) const {
-    auto it = m_pageTables.find(processId);
-    if (it == m_pageTables.end()) {
-      return 0;
-    }
+  std::vector<waos::common::PageTableEntryInfo> FIFOMemoryManager::getPageTableForProcess(int processId) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-    const PageTable& pageTable = it->second;
-    return std::count_if(pageTable.begin(), pageTable.end(),
-                         [](const auto& pair) { return pair.second.isLoaded(); });
+    std::vector<waos::common::PageTableEntryInfo> result;
+    auto it = m_pageTables.find(processId);
+    if (it != m_pageTables.end()) {
+      for(const auto& pair : it->second) {
+        waos::common::PageTableEntryInfo info;
+        info.pageNumber = pair.first;
+        info.frameNumber = pair.second.frameNumber;
+        info.present = pair.second.present;
+        info.referenced = pair.second.referenced;
+        info.modified = pair.second.modified;
+        result.push_back(info);
+      }
+    }
+    return result;
+  }
+
+  waos::common::MemoryStats FIFOMemoryManager::getMemoryStats() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_stats;
+  }
+
+  std::string FIFOMemoryManager::getAlgorithmName() const {
+    return "FIFO (First-In, First-Out)";
   }
 
   int FIFOMemoryManager::findFreeFrame() const {
@@ -128,6 +173,7 @@ namespace waos::memory {
     // Update page table entry
     PageTableEntry& entry = m_pageTables[processId][pageNumber];
     entry.load(frameIndex, *m_clockRef);
+    m_stats.usedFrames++;
   }
 
   int FIFOMemoryManager::selectVictimFrame() {
@@ -152,6 +198,7 @@ namespace waos::memory {
 
     PageTableEntry& entry = m_pageTables[frame.pid][frame.pageNumber];
     entry.evict();
+    m_stats.usedFrames--;
   }
 
 }

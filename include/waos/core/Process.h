@@ -1,7 +1,7 @@
 /**
  * @brief Defines the Process Control Block (PCB) data structure for the simulator.
- * @version 0.3
- * @date 11-21-2025
+ * @version 0.4
+ * @date 11-25-2025
  */
 
 #pragma once
@@ -9,6 +9,11 @@
 #include <cstdint>
 #include <vector>
 #include <queue>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+#include <string>
 
 namespace waos::core {
 
@@ -77,31 +82,42 @@ namespace waos::core {
      * @param requiredPages The number of memory pages this process requires.
      */
     Process(int pid, uint64_t arrivalTime, int priority, std::queue<Burst> bursts, int requiredPages);
+    ~Process(); // Destructor to join thread
+
+    /**
+     * @brief Starts the internal OS thread.
+     * Should be called when the process is created or arrives.
+     */
+    void startThread();
+
+    /**
+     * @brief Signals the process thread to execute one CPU tick.
+     * Unblocks the internal run loop.
+     */
+    void signalRun();
+
+    /**
+     * @brief Signals the process thread to stop and join.
+     * Used for cleanup or forced termination.
+     */
+    void stopThread();
+
+    /**
+     * @brief Blocks the caller (Kernel) until the process finishes its current tick logic.
+     * Ensures synchronization before advancing the global clock.
+     */
+    void waitForTickCompletion();
 
     int getPid() const;
     uint64_t getArrivalTime() const;
-    int getRequiredPages() const;
     int getPriority() const; // Lower value = Higher priority
+    int getRequiredPages() const;
 
+    ProcessStats getStats() const;
     ProcessState getState() const;
-    void setState(ProcessState newState, uint64_t currentTime);
 
-    /**
-     * @brief Gets the type of the current burst (CPU or IO).
-     */
     BurstType getCurrentBurstType() const;
-
-    /**
-     * @brief Gets the remaining duration of the current burst.
-     */
     int getCurrentBurstDuration() const;
-
-    /**
-     * @brief Consumes time from the current burst.
-     * @param timeUnits Amount of time to process.
-     * @return True if the burst is completed, false otherwise.
-     */
-    bool updateCurrentBurst(int timeUnits);
 
     /**
      * @brief Removes the current finished burst and moves to the next.
@@ -110,20 +126,21 @@ namespace waos::core {
     bool hasMoreBursts() const;
 
     /**
+     * @brief Simula el paso del tiempo durante una operación de E/S.
+     *
+     * @param ticks Cantidad de tiempo a descontar del temporizador.
+     * @return true si la operación de E/S ha finalizado (temporizador llegó a 0).
+     */
+    bool simulateIoWait(int ticks);
+
+    /**
      * @brief Gets the page number the process needs to access in the current CPU tick.
      * @return The virtual page number (0 to requiredPages - 1).
      */
     int getCurrentPageRequirement() const;
 
     /**
-     * @brief Advances the instruction pointer to the next memory reference.
-     * Should be called after a successful CPU tick execution.
-     */
-    void advanceInstructionPointer();
-
-    /**
      * @brief Gets the complete page reference string for this process.
-     * Used by Optimal memory manager to make replacement decisions.
      * @return Const reference to the vector of page references.
      */
     const std::vector<int>& getPageReferenceString() const;
@@ -133,32 +150,51 @@ namespace waos::core {
     void resetQuantum();
     void incrementQuantum(int ticks);
 
-    const ProcessStats& getStats() const;
+    // Stat updaters (Thread-Safe or called by Kernel)
+    void setState(ProcessState newState, uint64_t currentTime);
     void addCpuTime(uint64_t time);
     void addIoTime(uint64_t time);
     void incrementPageFaults();
     void incrementPreemptions();
+    void advanceInstructionPointer();
 
   private:
     int m_pid;
-    int m_priority;
-    ProcessState m_state;
-
-    // Scheduling Information
     uint64_t m_arrivalTime;
+    int m_priority;
     std::queue<Burst> m_bursts;
-    int m_quantumUsed; // Ticks used in current CPU slice
-    
-    // Memory Information
     int m_requiredPages;
 
+    int m_quantumUsed;
     ProcessStats m_stats;
+    std::atomic<ProcessState> m_state; // Atomic for thread safety
 
     // Memory Simulation Internal Data
     std::vector<int> m_pageReferenceString;
     size_t m_instructionPointer;
 
-    // Generates a deterministic sequence of page references based on locality.
+    // Threading Infrastructure
+    std::thread m_thread;
+    mutable std::mutex m_processMutex;
+    std::condition_variable m_cvRun;       // Wait for Kernel signal (Dispatch)
+    std::condition_variable m_cvKernel;    // Notify Kernel (Yield/Done)
+
+    bool m_running;             // Predicate for m_cvRun (Is it my turn?)
+    bool m_tickCompleted;       // Predicate for m_cvKernel (Did I finish?)
+    std::atomic<bool> m_stopThread; // Signal to exit thread loop
+
+    /**
+     * @brief Main loop executed by the internal thread.
+     * Simulates the Fetch-Decode-Execute cycle.
+     */
+    void run();
+
+    /**
+     * @brief Internal logic to execute one burst unit.
+     * @return True if the burst finished in this tick.
+     */
+    bool executeOneTick();
+
     void generateReferenceString();
   };
 

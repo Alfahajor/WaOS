@@ -1,6 +1,6 @@
 /**
  * @brief Defines the main orchestration class for the OS simulation.
- * @version 0.3
+ * @version 0.4
  * @date 11-22-2025
  */
 
@@ -16,15 +16,10 @@
 #include "waos/core/Clock.h"
 #include "waos/scheduler/IScheduler.h"
 #include "waos/memory/IMemoryManager.h"
+#include "waos/core/SystemMonitor.h"
+#include "waos/common/DataStructures.h"
 
 namespace waos::core {
-
-  // Tracks a process waiting for a page to be loaded (Page Fault penalty).
-  struct MemoryWaitInfo {
-    Process* process;
-    int ticksRemaining; // Penalización restante
-    int pageNumber; // Save pending page
-  };
 
   /**
    * @class Simulator
@@ -60,23 +55,23 @@ namespace waos::core {
      */
     void setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> memoryManager);
 
-    /**
-     * @brief Starts the simulation loop. This might run in a separate thread
-     */
+    // Simulation
     void start();
-
-    /**
-     * @brief Stops or pauses the simulation.
-     */
     void stop();
-
-    /**
-     * @brief Resets the simulation to its initial state (time 0).
-     */
     void reset();
 
-    // public to facilitate step-by-step unit testing
     void tick();
+
+    // Thread-safe getters
+    std::vector<const Process*> getAllProcesses() const;
+    const Process* getRunningProcess() const;
+    std::vector<const Process*> getBlockedProcesses() const;
+    std::vector<waos::common::MemoryWaitInfo> getMemoryWaitQueue() const;
+    std::vector<const Process*> getReadyProcesses() const;
+
+    waos::common::SimulatorMetrics getSimulatorMetrics() const;
+    std::string getSchedulerAlgorithmName() const;
+    std::string getMemoryAlgorithmName() const;
 
     // Getters for validation in tests
     uint64_t getCurrentTime() const;
@@ -114,6 +109,8 @@ namespace waos::core {
     std::unique_ptr<waos::scheduler::IScheduler> m_scheduler;
     std::unique_ptr<waos::memory::IMemoryManager> m_memoryManager;
 
+    SystemMonitor m_systemMonitor;
+
     // The Simulator owns all processes.
     std::vector<std::unique_ptr<Process>> m_processes;
     
@@ -124,7 +121,12 @@ namespace waos::core {
     std::vector<Process*> m_blockedQueue; 
 
     // Processes waiting for the disk to load a page
-    std::list<MemoryWaitInfo> m_memoryWaitQueue; 
+    struct InternalMemoryWait {
+      Process* process;
+      int ticksRemaining;
+      int pageNumber;
+    };
+    std::list<InternalMemoryWait> m_memoryWaitQueue;
 
     // Process currently in CPU
     Process* m_runningProcess;
@@ -133,12 +135,17 @@ namespace waos::core {
     Process* m_nextProcess;
     int m_contextSwitchCounter; // Ticks remaining for CS
 
+    // Global Accumulators for Metrics
+    uint64_t m_cpuActiveTicks;
+    int m_totalPageFaults;
+    int m_totalContextSwitches;
+    waos::common::SimulatorMetrics m_metrics;
+
     bool m_isRunning;
     mutable std::mutex m_simulationMutex; // For thread safety in future steps
 
-    const int PAGE_FAULT_PENALTY = 5; 
-    const int CONTEXT_SWITCH_DURATION = 1;
-    const int SYSTEM_QUANTUM = 4;
+    int m_pageFaultPenalty; 
+    int m_contextSwitchDuration;
 
     // The main logic step executed every tick.
     void step();
@@ -152,6 +159,12 @@ namespace waos::core {
 
     // Helper to initiate context switch
     void triggerContextSwitch(Process* current, Process* next);
+
+    // Internal helper to refresh metric struct
+    void updateMetrics();
+
+    // Returns true if I/O burst finished in this step
+    bool processIoStep(Process* p);
   };
 
 }

@@ -7,6 +7,8 @@
 
 #include <cstdint>
 #include <vector>
+#include <string>
+#include "waos/common/DataStructures.h"
 
 namespace waos::memory {
 
@@ -87,6 +89,27 @@ namespace waos::memory {
       // Default implementation does nothing (for FIFO, LRU)
       (void)processId;
     }
+
+    /**
+     * @brief Obtiene el estado visual de todos los frames físicos.
+     * Retorna vector ordenado por Frame ID.
+     */
+    virtual std::vector<waos::common::FrameInfo> getFrameStatus() const = 0;
+
+    /**
+     * @brief Obtiene la tabla de páginas para visualización.
+     */
+    virtual std::vector<waos::common::PageTableEntryInfo> getPageTableForProcess(int processId) const = 0;
+
+    /**
+     * @brief Obtiene estadísticas acumuladas de memoria (Hits, Faults, etc).
+     */
+    virtual waos::common::MemoryStats getMemoryStats() const = 0;
+
+    /**
+     * @brief Obtiene el nombre del algoritmo (ej: "LRU", "FIFO").
+     */
+    virtual std::string getAlgorithmName() const = 0;
   };
 
 }
