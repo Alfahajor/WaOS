@@ -235,7 +235,7 @@ namespace waos::core {
     // IO handling remains simulated in kernel space for simplicity
     // and determinism, even with threaded processes. The thread is sleeping.
     auto it = m_blockedQueue.begin();
-    while (it != m_blockedQueue.end()) {
+    if (it != m_blockedQueue.end()) {
       Process* p = *it;
 
       // Thread is conceptually blocked. Kernel updates the PCB state.
@@ -267,7 +267,7 @@ namespace waos::core {
   void Simulator::handlePageFaults() {
     // Kernel simulates disk latency.
     auto it = m_memoryWaitQueue.begin();
-    while (it != m_memoryWaitQueue.end()) {
+    if (it != m_memoryWaitQueue.end()) {
       InternalMemoryWait& info = *it;
       
       // Simular tiempo de disco para cargar la página
