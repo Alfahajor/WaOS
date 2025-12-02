@@ -10,33 +10,40 @@
 
 namespace waos::core {
 
+/**
+ * @class Clock
+ * @brief Manages the discrete simulation time.
+ *
+ * This class provides a centralized mechanism for advancing and querying
+ * the global simulation time, measured in "ticks".
+ */
+class Clock {
+ public:
   /**
-   * @class Clock
-   * @brief Manages the discrete simulation time.
-   *
-   * This class provides a centralized mechanism for advancing and querying
-   * the global simulation time, measured in "ticks".
+   * @brief Constructs a Clock, initialized to time 0.
    */
-  class Clock {
-  public:
-    /**
-     * @brief Constructs a Clock, initialized to time 0.
-     */
-    Clock();
+  Clock();
 
-    /**
-     * @brief Advances the simulation time by one tick.
-     */
-    void tick();
+  /**
+   * @brief Advances the simulation time by one tick.
+   */
+  void tick();
 
-    /**
-     * @brief Gets the current simulation time.
-     * @return The current number of ticks since the simulation started.
-     */
-    uint64_t getTime() const;
+  /**
+   * @brief Gets the current simulation time.
+   * @return The current number of ticks since the simulation started.
+   */
+  uint64_t getTime() const;
 
-  private:
-    uint64_t m_currentTime;
-  };
+  /**
+   * @brief Gets a pointer to the current simulation time.
+   * Used by components that need a reference to the clock (e.g. MemoryManager).
+   * @return Pointer to the internal time counter.
+   */
+  const uint64_t* getTimeAddress() const;
 
-}
+ private:
+  uint64_t m_currentTime;
+};
+
+}  // namespace waos::core

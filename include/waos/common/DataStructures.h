@@ -19,6 +19,16 @@
 #include <vector>
 
 namespace waos::common {
+/**
+ * @struct MemoryWaitInfo
+ * @brief Información sobre procesos esperando carga de página.
+ * Útil para visualización en el Panel de Bloqueos (distinguir E/S de PageFault).
+ */
+struct MemoryWaitInfo {
+  int pid;                // ID del proceso
+  int pageNumber;         // Página que causó el fallo
+  int ticksRemaining;     // Tiempo restante de penalización
+};
 
 /**
  * @brief Métricas globales del simulador calculadas en cada tick.

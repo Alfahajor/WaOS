@@ -6,10 +6,10 @@ namespace waos::gui::viewmodels {
 
 ProcessMonitorViewModel::ProcessMonitorViewModel(QObject* parent) : QObject(parent) {}
 
-void ProcessMonitorViewModel::setSimulator(waos::gui::mock::MockSimulator* simulator) {
+void ProcessMonitorViewModel::setSimulator(waos::core::Simulator* simulator) {
   m_simulator = simulator;
   if (m_simulator) {
-    connect(m_simulator, &waos::gui::mock::MockSimulator::clockTicked,
+    connect(m_simulator, &waos::core::Simulator::clockTicked,
             this, &ProcessMonitorViewModel::onClockTicked);
   }
 }
@@ -42,25 +42,6 @@ void ProcessMonitorViewModel::onClockTicked(uint64_t tick) {
   if (m_cpuUtilization != metrics.cpuUtilization) {
     m_cpuUtilization = metrics.cpuUtilization;
     emit cpuUtilizationChanged();
-  }
-}
-
-QString ProcessMonitorViewModel::processStateToString(waos::core::ProcessState state) const {
-  switch (state) {
-    case waos::core::ProcessState::NEW:
-      return "Nuevo";
-    case waos::core::ProcessState::READY:
-      return "Listo";
-    case waos::core::ProcessState::RUNNING:
-      return "Ejecutando";
-    case waos::core::ProcessState::BLOCKED:
-      return "Bloqueado (E/S)";
-    case waos::core::ProcessState::WAITING_MEMORY:
-      return "Bloqueado (Memoria)";
-    case waos::core::ProcessState::TERMINATED:
-      return "Terminado";
-    default:
-      return "Desconocido";
   }
 }
 

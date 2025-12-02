@@ -27,7 +27,7 @@ class MockSimulator : public QObject {
   std::vector<const waos::core::Process*> getAllProcesses() const;
   const waos::core::Process* getRunningProcess() const;
   std::vector<const waos::core::Process*> getBlockedProcesses() const;
-  std::vector<waos::core::MemoryWaitInfo> getMemoryWaitQueue() const;
+  std::vector<waos::common::MemoryWaitInfo> getMemoryWaitQueue() const;
   std::vector<const waos::core::Process*> getReadyProcesses() const;
 
   waos::common::SimulatorMetrics getSimulatorMetrics() const;

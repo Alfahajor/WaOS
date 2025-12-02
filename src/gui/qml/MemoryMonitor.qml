@@ -29,7 +29,8 @@ Rectangle {
             // Physical Memory Grid
             ColumnLayout {
                 Layout.fillHeight: true
-                Layout.preferredWidth: parent.width * 0.6
+                Layout.fillWidth: true
+                Layout.preferredWidth: 3 // Ratio 3
                 
                 Label { text: "Memoria Física (Marcos)"; font.bold: true }
                 
@@ -61,6 +62,7 @@ Rectangle {
             ColumnLayout {
                 Layout.fillHeight: true
                 Layout.fillWidth: true
+                Layout.preferredWidth: 2 // Ratio 2
                 
                 Label { text: "Tabla de Páginas"; font.bold: true }
                 

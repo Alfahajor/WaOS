@@ -53,11 +53,11 @@ std::vector<const waos::core::Process*> MockSimulator::getBlockedProcesses() con
   return result;
 }
 
-std::vector<waos::core::MemoryWaitInfo> MockSimulator::getMemoryWaitQueue() const {
-  std::vector<waos::core::MemoryWaitInfo> result;
+std::vector<waos::common::MemoryWaitInfo> MockSimulator::getMemoryWaitQueue() const {
+  std::vector<waos::common::MemoryWaitInfo> result;
   for (const auto& p : m_processes) {
     if (p->getState() == waos::core::ProcessState::WAITING_MEMORY) {
-      result.push_back({p.get(), 5, 0});
+      result.push_back({p->getPid(), 0, 5});
     }
   }
   return result;

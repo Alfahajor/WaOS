@@ -5,7 +5,7 @@
 #include <map>
 #include <vector>
 
-#include "../mock/MockSimulator.h"
+#include "waos/core/Simulator.h"
 
 namespace waos::gui::viewmodels {
 
@@ -22,22 +22,19 @@ class ExecutionLogViewModel : public QAbstractListModel {
 
   explicit ExecutionLogViewModel(QObject* parent = nullptr);
 
-  void setSimulator(waos::gui::mock::MockSimulator* simulator);
+  void setSimulator(waos::core::Simulator* simulator);
 
   int rowCount(const QModelIndex& parent = QModelIndex()) const override;
   QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
   QHash<int, QByteArray> roleNames() const override;
 
  public slots:
-  void onClockTicked(uint64_t tick);
+  void onLogMessage(QString message);
   void reset();
 
  private:
-  waos::gui::mock::MockSimulator* m_simulator = nullptr;
+  waos::core::Simulator* m_simulator = nullptr;
   std::vector<LogEntry> m_logs;
-
-  // State tracking
-  std::map<int, waos::core::ProcessState> m_previousStates;
 };
 
 }  // namespace waos::gui::viewmodels

@@ -1,78 +1,11 @@
-/**
- * @brief Integration tests for Simulator orchestration (CPU, IO, Page Faults).
- */
-
 #include "waos/core/Simulator.h"
-#include "waos/scheduler/IScheduler.h"
-#include "waos/memory/IMemoryManager.h"
+#include "tests/core/CoreMocks.h"
 #include <iostream>
 #include <cassert>
 #include <fstream>
-#include <map>
 #include <cstdio>
-#include <list>
 
 using namespace waos::core;
-using namespace waos::scheduler;
-using namespace waos::memory;
-
-class MockScheduler : public IScheduler {
-public:
-  std::list<Process*> readyQueue;
-
-  void addProcess(Process* p) override {
-    readyQueue.push_back(p);
-  }
-
-  Process* getNextProcess() override {
-    if (readyQueue.empty()) return nullptr;
-    Process* p = readyQueue.front();
-    readyQueue.pop_front();
-    return p;
-  }
-
-  bool hasReadyProcesses() const override {
-    return !readyQueue.empty();
-  }
-
-  int getTimeSlice() const override { return -1; }
-};
-
-class MockMemoryManager : public IMemoryManager {
-public:
-  // Map to simulate physical memory: <PID, <Page, Loaded?>>
-  std::map<int, std::map<int, bool>> memoryState;
-
-  bool isPageLoaded(int pid, int page) const override {
-    if (memoryState.count(pid) && memoryState.at(pid).count(page)) {
-      return memoryState.at(pid).at(page);
-    }
-    return false; // Default: Not loaded
-  }
-
-  PageRequestResult requestPage(int pid, int page) override {
-    // In a real system, this might trigger replacement.
-    // In Mock, we just acknowledge the request. 
-    // The test controller will manually flip the bool later to simulate load completion.
-    return PageRequestResult::PAGE_FAULT;
-  }
-
-  void completePageLoad(int pid, int pageNumber) override {
-    memoryState[pid][pageNumber] = true;
-    std::cout << "MockMem: Page " << pageNumber << " loaded for PID " << pid << "\n";
-  }
-
-  void allocateForProcess(int pid, int pages) override { }
-  
-  void freeForProcess(int pid) override {
-    memoryState.erase(pid);
-  }
-  
-  // Helper for Test Controller
-  void forceLoadPage(int pid, int page) {
-    memoryState[pid][page] = true;
-  }
-};
 
 void createTestFile(const std::string& fname, const std::string& content) {
   std::ofstream out(fname);
@@ -80,45 +13,67 @@ void createTestFile(const std::string& fname, const std::string& content) {
   out.close();
 }
 
-// Tests
 void test_io_blocking_flow() {
   std::cout << "[RUNNING] test_io_blocking_flow..." << std::endl;
   std::string fname = "test_io.txt";
+
   createTestFile(fname, "P1 0 CPU(1),E/S(2),CPU(1) 1 4\n");
 
   Simulator sim;
-  sim.loadProcesses(fname);
+  if (!sim.loadProcesses(fname)) {
+    std::cerr << "Failed to load processes" << std::endl;
+    assert(false);
+  }
   
   auto sched = std::make_unique<MockScheduler>();
   auto mem = std::make_unique<MockMemoryManager>();
-  auto memPtr = mem.get(); // Keep raw ptr to control mock
+  auto memPtr = mem.get();
   
   sim.setScheduler(std::move(sched));
   sim.setMemoryManager(std::move(mem));
-  
-  // Pre-load all pages to avoid Page Faults in this test
-  for(int i=0; i<4; ++i) memPtr->forceLoadPage(1, i);
+
+  // Evitar Page Faults
+  memPtr->everythingLoaded = true;
 
   sim.start();
 
-  sim.tick(); // 0: Arrival to Ready
-  sim.tick(); // 1: CPU(1) finish to IO Start -> Blocked
-  sim.tick(); // 2: IO(1/2)
-  sim.tick(); // 3: IO(2/2) finish to Ready
-  sim.tick(); // 4: Ready to CPU
-  sim.tick(); // 5: CPU(1) finish to Terminated
+  // Tick 0: P1 llega y seleccionado inmediatamente
+  sim.tick();
+  assert(sim.getRunningProcess() != nullptr);
+  assert(sim.getRunningProcess()->getPid() == 1);
 
-  // Clean up
-  sim.tick(); // Cleanup tick
-  assert(!sim.isRunning()); // Should be finished
+  // Tick 1: P1 ejecuta CPU(1). Termina ráfaga. Bloquea para IO.
+  // Fin de Tick 1: P1 en BlockedQueue. Running = nullptr.
+  sim.tick();
+  assert(sim.getBlockedProcesses().size() == 1);
+  assert(sim.getBlockedProcesses()[0]->getPid() == 1);
+  assert(sim.getRunningProcess() == nullptr);
+
+  // Tick 2: IO(2) a IO(1). Sigue bloqueado
+  sim.tick();
+  assert(sim.getBlockedProcesses().size() == 1);
+
+  // Tick 3: I/O(1) a I/O(0). Termina IO. Pasa a Ready.
+  // handleScheduling ve CPU libre y selecciona P1 inmediatamente.
+  // Fin de Tick 3: P1 Running.
+  sim.tick();
+  assert(sim.getBlockedProcesses().size() == 0);
+  assert(sim.getRunningProcess() != nullptr);
+  assert(sim.getRunningProcess()->getPid() == 1);
+
+  // Tick 4: CPU(1) comienza y termina. P1 terminado
+  sim.tick();
+  assert(sim.getRunningProcess() == nullptr);
+  assert(sim.getSimulatorMetrics().completedProcesses == 1);
 
   std::cout << "[PASSED] test_io_blocking_flow" << std::endl;
   std::remove(fname.c_str());
 }
 
 void test_page_fault_auto_resolution() {
-  std::cout << "[RUNNING] test_page_fault_flow..." << std::endl;
+  std::cout << "[RUNNING] test_page_fault_auto_resolution..." << std::endl;
   std::string fname = "test_pf.txt";
+
   createTestFile(fname, "P1 0 CPU(10) 1 1\n");
 
   Simulator sim;
@@ -130,31 +85,35 @@ void test_page_fault_auto_resolution() {
   sim.setScheduler(std::move(sched));
   sim.setMemoryManager(std::move(mem));
 
-  // DO NOT load pages. All pages are false.
-  
   sim.start();
 
-  // Tick 0: Arrival to Ready.
+  // Tick 0: P1 llega, se asigna CPU inmediatamente
+  // El proceso queda en estado RUNNING al final del tick.
+  sim.tick();
+  assert(sim.getRunningProcess() != nullptr);
+  assert(sim.getRunningProcess()->getPid() == 1);
+
+  // Tick 1: handleCpuExecution, ocurre Page Fault.
+  // El proceso es movido a WAITING_MEMORY y añadido a memoryWaitQueue.
+  // Running pasa a nullptr.
   sim.tick();
 
-  // Tick 1: Scheduler picks P1 to Check Mem to False to Page Fault to Waiting Memory 
-  sim.tick();
+  // Validar que está en la cola de espera de memoria.
+  auto memoryWait = sim.getMemoryWaitQueue();
+  auto blocked = sim.getBlockedProcesses();
 
-  assert(sim.isRunning());
+  // Debe haber 1 proceso esperando memoria
+  assert(memoryWait.size() == 1);
+  assert(memoryWait[0].pid == 1);
+  
+  // NO debe estar en la cola de E/S genérica
+  assert(blocked.size() == 0);
 
-  // Ticks 2, 3, 4, 5, 6: P1 is waiting.
-  for(int i=0; i<5; ++i) sim.tick();
+  // Validar estado del proceso
+  auto allProcs = sim.getAllProcesses();
+  assert(allProcs[0]->getState() == ProcessState::WAITING_MEMORY);
 
-  // Tick 7: P1 moves from Wait to Ready.
-  sim.tick();
-
-  // Tick 8: Scheduler picks P1 to Memory Check (Now True) to CPU exec
-  sim.tick();
-
-  // Validate simulation is running (P1 is in CPU)
-  assert(sim.isRunning());
-
-  std::cout << "[PASSED] test_page_fault_flow" << std::endl;
+  std::cout << "[PASSED] test_page_fault_auto_resolution" << std::endl;
   std::remove(fname.c_str());
 }
 

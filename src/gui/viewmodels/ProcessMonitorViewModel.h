@@ -2,9 +2,9 @@
 #include <QList>
 #include <QObject>
 
-#include "../mock/MockSimulator.h"
 #include "../models/ProcessItemModel.h"
 #include "waos/core/Process.h"
+#include "waos/core/Simulator.h"
 
 namespace waos::gui::viewmodels {
 
@@ -18,7 +18,7 @@ class ProcessMonitorViewModel : public QObject {
  public:
   explicit ProcessMonitorViewModel(QObject* parent = nullptr);
 
-  void setSimulator(waos::gui::mock::MockSimulator* simulator);
+  void setSimulator(waos::core::Simulator* simulator);
   QList<QObject*> processList() const { return m_processItems; }
 
   double avgWaitTime() const { return m_avgWaitTime; }
@@ -35,14 +35,12 @@ class ProcessMonitorViewModel : public QObject {
   void cpuUtilizationChanged();
 
  private:
-  waos::gui::mock::MockSimulator* m_simulator = nullptr;
+  waos::core::Simulator* m_simulator = nullptr;
   QList<QObject*> m_processItems;
 
   double m_avgWaitTime = 0.0;
   double m_avgTurnaroundTime = 0.0;
   double m_cpuUtilization = 0.0;
-
-  QString processStateToString(waos::core::ProcessState state) const;
 };
 
 }  // namespace waos::gui::viewmodels
