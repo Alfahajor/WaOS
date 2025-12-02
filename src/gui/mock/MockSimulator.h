@@ -34,6 +34,8 @@ class MockSimulator : public QObject {
   std::string getSchedulerAlgorithmName() const;
   std::string getMemoryAlgorithmName() const;
 
+  std::vector<waos::common::PageTableEntryInfo> getPageTable(int pid) const;
+
   const MockScheduler* getScheduler() const { return m_scheduler.get(); }
   const MockMemoryManager* getMemoryManager() const { return m_memoryManager.get(); }
 

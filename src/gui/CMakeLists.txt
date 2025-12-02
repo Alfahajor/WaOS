@@ -34,6 +34,7 @@ set(GUI_HEADERS
     viewmodels/ExecutionLogViewModel.h
     models/ProcessItemModel.h
     models/FrameItemModel.h
+    models/PageTableItemModel.h
     # models/EventItemModel.h
     mock/MockDataProvider.h
     mock/MockScheduler.h

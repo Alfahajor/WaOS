@@ -85,4 +85,14 @@ std::string MockSimulator::getMemoryAlgorithmName() const {
   return m_memoryManager->getAlgorithmName();
 }
 
+std::vector<waos::common::PageTableEntryInfo> MockSimulator::getPageTable(int pid) const {
+  // Find process to get page count
+  for (const auto& p : m_processes) {
+    if (p->getPid() == pid) {
+      return MockDataProvider::generatePageTable(pid, p->getRequiredPages(), m_currentTick);
+    }
+  }
+  return {};
+}
+
 }  // namespace waos::gui::mock

@@ -12,8 +12,35 @@ void MemoryMonitorViewModel::setSimulator(waos::gui::mock::MockSimulator* simula
   }
 }
 
+void MemoryMonitorViewModel::setSelectedPid(int pid) {
+  if (m_selectedPid != pid) {
+    m_selectedPid = pid;
+    emit selectedPidChanged();
+    updatePageTable();
+  }
+}
+
 void MemoryMonitorViewModel::onClockTicked(uint64_t tick) {
   if (!m_simulator) return;
+
+  // Update Process List
+  auto processes = m_simulator->getAllProcesses();
+  QList<int> newPids;
+  for (const auto* p : processes) {
+    newPids.append(p->getPid());
+  }
+
+  if (m_processList != newPids) {
+    m_processList = newPids;
+    emit processListChanged();
+
+    // Auto-select first if none selected or selected is gone
+    if (!m_processList.isEmpty()) {
+      if (m_selectedPid == -1 || !m_processList.contains(m_selectedPid)) {
+        setSelectedPid(m_processList.first());
+      }
+    }
+  }
 
   auto* memoryManager = m_simulator->getMemoryManager();
   if (!memoryManager) return;
@@ -58,6 +85,32 @@ void MemoryMonitorViewModel::onClockTicked(uint64_t tick) {
     m_hitRatio = stats.hitRatio;
     emit hitRatioChanged();
   }
+
+  updatePageTable();
+}
+
+void MemoryMonitorViewModel::updatePageTable() {
+  if (!m_simulator || m_selectedPid == -1) {
+    qDeleteAll(m_pageTableItems);
+    m_pageTableItems.clear();
+    emit pageTableChanged();
+    return;
+  }
+
+  auto pageTable = m_simulator->getPageTable(m_selectedPid);
+
+  qDeleteAll(m_pageTableItems);
+  m_pageTableItems.clear();
+
+  for (const auto& entry : pageTable) {
+    auto* item = new waos::gui::models::PageTableItemModel(
+        entry.pageNumber,
+        entry.frameNumber,
+        entry.present,
+        this);
+    m_pageTableItems.append(item);
+  }
+  emit pageTableChanged();
 }
 
 }  // namespace waos::gui::viewmodels
