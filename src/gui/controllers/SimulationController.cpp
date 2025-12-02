@@ -6,7 +6,12 @@
 
 #include "../viewmodels/BlockingEventsViewModel.h"
 #include "waos/memory/FIFOMemoryManager.h"
+#include "waos/memory/LRUMemoryManager.h"
+#include "waos/memory/OptimalMemoryManager.h"
 #include "waos/scheduler/FCFSScheduler.h"
+#include "waos/scheduler/PriorityScheduler.h"
+#include "waos/scheduler/RRScheduler.h"
+#include "waos/scheduler/SJFScheduler.h"
 
 namespace waos::gui::controllers {
 
@@ -81,6 +86,50 @@ void SimulationController::reset() {
 void SimulationController::step() {
   // Force a single step even if paused
   m_simulator->tick(true);
+}
+
+void SimulationController::configure(const QString& scheduler, int quantum, const QString& memory, const QString& filePath) {
+  // 1. Configure Scheduler
+  if (scheduler == "Round Robin") {
+    m_simulator->setScheduler(std::make_unique<waos::scheduler::RRScheduler>(quantum));
+  } else if (scheduler == "SJF") {
+    m_simulator->setScheduler(std::make_unique<waos::scheduler::SJFScheduler>());
+  } else if (scheduler == "Priority") {
+    m_simulator->setScheduler(std::make_unique<waos::scheduler::PriorityScheduler>());
+  } else {
+    // Default to FCFS
+    m_simulator->setScheduler(std::make_unique<waos::scheduler::FCFSScheduler>());
+  }
+
+  // 2. Configure Memory Manager
+  // Default frames = 16 for now
+  int frames = 16;
+  if (memory == "LRU") {
+    m_simulator->setMemoryManager(std::make_unique<waos::memory::LRUMemoryManager>(frames, m_simulator->getClockRef()));
+  } else if (memory == "Optimal") {
+    m_simulator->setMemoryManager(std::make_unique<waos::memory::OptimalMemoryManager>(frames, m_simulator->getClockRef()));
+  } else {
+    // Default to FIFO
+    m_simulator->setMemoryManager(std::make_unique<waos::memory::FIFOMemoryManager>(frames, m_simulator->getClockRef()));
+  }
+
+  // 3. Load Process File
+  if (!filePath.isEmpty()) {
+    QString cleanPath = filePath;
+    if (cleanPath.startsWith("file:///")) {
+      cleanPath = cleanPath.remove(0, 8);
+    }
+
+    if (QFileInfo::exists(cleanPath)) {
+      m_simulator->loadProcesses(cleanPath.toStdString());
+    } else {
+      qWarning() << "File not found:" << cleanPath;
+    }
+  }
+
+  emit schedulerAlgorithmChanged();
+  emit memoryAlgorithmChanged();
+  emit simulationReset();  // Refresh views
 }
 
 bool SimulationController::isRunning() const {

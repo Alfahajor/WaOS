@@ -26,6 +26,7 @@ class SimulationController : public QObject {
   Q_INVOKABLE void stop();
   Q_INVOKABLE void reset();
   Q_INVOKABLE void step();
+  Q_INVOKABLE void configure(const QString& scheduler, int quantum, const QString& memory, const QString& filePath);
 
   bool isRunning() const;
   int tickInterval() const;
