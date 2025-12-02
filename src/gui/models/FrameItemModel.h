@@ -7,6 +7,7 @@ namespace waos::gui::models {
 class FrameItemModel : public QObject {
   Q_OBJECT
   Q_PROPERTY(int frameId READ frameId WRITE setFrameId NOTIFY frameIdChanged)
+  Q_PROPERTY(int pid READ pid WRITE setPid NOTIFY pidChanged)
   Q_PROPERTY(bool occupied READ occupied WRITE setOccupied NOTIFY occupiedChanged)
   Q_PROPERTY(QString label READ label WRITE setLabel NOTIFY labelChanged)
   Q_PROPERTY(QString color READ color WRITE setColor NOTIFY colorChanged)
@@ -19,6 +20,14 @@ class FrameItemModel : public QObject {
     if (m_frameId != id) {
       m_frameId = id;
       emit frameIdChanged();
+    }
+  }
+
+  int pid() const { return m_pid; }
+  void setPid(int pid) {
+    if (m_pid != pid) {
+      m_pid = pid;
+      emit pidChanged();
     }
   }
 
@@ -48,12 +57,14 @@ class FrameItemModel : public QObject {
 
  signals:
   void frameIdChanged();
+  void pidChanged();
   void occupiedChanged();
   void labelChanged();
   void colorChanged();
 
  private:
   int m_frameId = 0;
+  int m_pid = -1;
   bool m_occupied = false;
   QString m_label;
   QString m_color;

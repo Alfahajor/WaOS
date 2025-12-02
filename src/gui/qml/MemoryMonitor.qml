@@ -109,10 +109,10 @@ Rectangle {
 
                     // PID (Center)
                     Text {
-                        text: parent.isFree ? "-" : "P" + parent.pid
+                        text: parent.isFree ? "Free" : "P" + parent.pid
                         font.pixelSize: 16
                         font.bold: true
-                        color: textColor
+                        color: parent.isFree ? "#585b70" : textColor
                         anchors.centerIn: parent
                     }
                 }
