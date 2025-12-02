@@ -8,13 +8,15 @@
 
 #pragma once
 
-#include "IScheduler.h"
-#include <map>
 #include <deque>
+#include <map>
 #include <mutex>
 
+#include "IScheduler.h"
+#include "waos/common/DataStructures.h"
+
 namespace waos::core {
-    class Process;
+class Process;
 }
 
 namespace waos::scheduler {
@@ -26,18 +28,24 @@ namespace waos::scheduler {
  * Lower integer value denotes higher priority (0 = highest).
  */
 class PriorityScheduler : public IScheduler {
-public:
-    PriorityScheduler() = default;
-    ~PriorityScheduler() override = default;
+ public:
+  PriorityScheduler();
+  ~PriorityScheduler() override = default;
 
-    void addProcess(waos::core::Process* p) override;
-    waos::core::Process* getNextProcess() override;
-    bool hasReadyProcesses() const override;
-    int getTimeSlice() const override;
+  void addProcess(waos::core::Process* p) override;
+  waos::core::Process* getNextProcess() override;
+  bool hasReadyProcesses() const override;
+  int getTimeSlice() const override;
 
-private:
-    mutable std::mutex m_mutex;
-    std::map<int, std::deque<waos::core::Process*>> m_queues; // < priority to queue
+  // Métodos de Observación
+  std::vector<const waos::core::Process*> peekReadyQueue() const override;
+  std::string getAlgorithmName() const override;
+  waos::common::SchedulerMetrics getSchedulerMetrics() const override;
+
+ private:
+  mutable std::mutex m_mutex;
+  std::map<int, std::deque<waos::core::Process*>> m_queues;  // < priority to queue
+  waos::common::SchedulerMetrics m_metrics;
 };
 
-}
+}  // namespace waos::scheduler

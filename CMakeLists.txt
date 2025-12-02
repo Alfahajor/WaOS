@@ -11,7 +11,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Quick Qml)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Quick Qml QuickControls2)
 
 # Agregamos el subdirectorio que contiene la lógica del núcleo.
 # Este subdirectorio tendrá su propio CMakeLists.txt.
@@ -19,22 +19,23 @@ add_subdirectory(src/core)
 add_subdirectory(src/scheduler)
 add_subdirectory(src/memory)
 
-# GUI Module (Qt Quick) - Temporarily commented for testing
-# add_subdirectory(src/gui)
+# GUI Module (Qt Quick)
+add_subdirectory(src/gui)
 
-# Main executable for GUI application - Temporarily commented
-# add_executable(waos_simulator
-#   src/gui/main.cpp
-# )
+# Main executable for GUI application
+add_executable(waos_simulator
+  src/gui/main.cpp
+)
 
-# target_link_libraries(waos_simulator PRIVATE
-#   waos_core
-#   waos_scheduler
-#   waos_gui
-#   Qt6::Core
-#   Qt6::Quick
-#   Qt6::Qml
-# )
+target_link_libraries(waos_simulator PRIVATE
+  core
+  scheduler
+  waos_gui
+  Qt6::Core
+  Qt6::Quick
+  Qt6::Qml
+  Qt6::QuickControls2
+)
 
 # Enable CTest
 enable_testing()

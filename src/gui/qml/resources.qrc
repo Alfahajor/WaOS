@@ -5,6 +5,12 @@
         <file>MemoryMonitor.qml</file>
         <file>BlockingPanel.qml</file>
         <file>ControlPanel.qml</file>
-        <file>GanttChart.qml</file>
+        <file>ExecutionLog.qml</file>
+        <file>icons/play.svg</file>
+        <file>icons/pause.svg</file>
+        <file>icons/step.svg</file>
+        <file>icons/reset.svg</file>
+        <file>icons/folder.svg</file>
+        <file>icons/check.svg</file>
     </qresource>
 </RCC>

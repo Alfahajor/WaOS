@@ -37,35 +37,34 @@ void test_io_blocking_flow() {
 
   sim.start();
 
-  // Tick 0: P1 llega to Scheduler to Inmediatamente seleccionado para Context Switch
-  sim.tick();
-  assert(sim.getReadyProcesses().size() == 0);
-
-  // Tick 1: Termina CS to P1 Running to CPU(1)
+  // Tick 0: P1 llega y seleccionado inmediatamente
   sim.tick();
   assert(sim.getRunningProcess() != nullptr);
   assert(sim.getRunningProcess()->getPid() == 1);
 
-  // Tick 2: CPU(1) termina to Detecta IO to Mueve a Bloqueado
-  // Nota: El tick procesa la ejecución y mueve al final.
+  // Tick 1: P1 ejecuta CPU(1). Termina ráfaga. Bloquea para IO.
+  // Fin de Tick 1: P1 en BlockedQueue. Running = nullptr.
   sim.tick();
   assert(sim.getBlockedProcesses().size() == 1);
   assert(sim.getBlockedProcesses()[0]->getPid() == 1);
+  assert(sim.getRunningProcess() == nullptr);
 
-  // Tick 3: E/S(2) termina, se marca para empezar E/S(1)
+  // Tick 2: IO(2) a IO(1). Sigue bloqueado
   sim.tick();
   assert(sim.getBlockedProcesses().size() == 1);
-  assert(sim.getBlockedProcesses()[0]->getPid() == 1);
 
-  // Tick 4: E/S(1) termina, el proceso vuelve a READY
-  // Se marca para cambio de contexto
+  // Tick 3: I/O(1) a I/O(0). Termina IO. Pasa a Ready.
+  // handleScheduling ve CPU libre y selecciona P1 inmediatamente.
+  // Fin de Tick 3: P1 Running.
   sim.tick();
   assert(sim.getBlockedProcesses().size() == 0);
-
-  // Tick 5: CPU(1) comienza
-  sim.tick();
   assert(sim.getRunningProcess() != nullptr);
   assert(sim.getRunningProcess()->getPid() == 1);
+
+  // Tick 4: CPU(1) comienza y termina. P1 terminado
+  sim.tick();
+  assert(sim.getRunningProcess() == nullptr);
+  assert(sim.getSimulatorMetrics().completedProcesses == 1);
 
   std::cout << "[PASSED] test_io_blocking_flow" << std::endl;
   std::remove(fname.c_str());
@@ -88,15 +87,31 @@ void test_page_fault_auto_resolution() {
 
   sim.start();
 
-  // Tick 0: Llegada to Inmediatamente Page Fault to Waiting Memory
+  // Tick 0: P1 llega, se asigna CPU inmediatamente
+  // El proceso queda en estado RUNNING al final del tick.
+  sim.tick();
+  assert(sim.getRunningProcess() != nullptr);
+  assert(sim.getRunningProcess()->getPid() == 1);
+
+  // Tick 1: handleCpuExecution, ocurre Page Fault.
+  // El proceso es movido a WAITING_MEMORY y añadido a memoryWaitQueue.
+  // Running pasa a nullptr.
   sim.tick();
 
-  // Tick 1: Se marca como Listo y regresa a readyQueue
-  sim.tick();
-
-  // Validar que está en la cola de espera de memoria, NO en bloqueados por E/S
+  // Validar que está en la cola de espera de memoria.
   auto memoryWait = sim.getMemoryWaitQueue();
-  assert(memoryWait.size() == 0);
+  auto blocked = sim.getBlockedProcesses();
+
+  // Debe haber 1 proceso esperando memoria
+  assert(memoryWait.size() == 1);
+  assert(memoryWait[0].pid == 1);
+  
+  // NO debe estar en la cola de E/S genérica
+  assert(blocked.size() == 0);
+
+  // Validar estado del proceso
+  auto allProcs = sim.getAllProcesses();
+  assert(allProcs[0]->getState() == ProcessState::WAITING_MEMORY);
 
   std::cout << "[PASSED] test_page_fault_auto_resolution" << std::endl;
   std::remove(fname.c_str());

@@ -9,10 +9,20 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
+
+#include "controllers/SimulationController.h"
+#include "viewmodels/BlockingEventsViewModel.h"
+#include "viewmodels/ExecutionLogViewModel.h"
+#include "viewmodels/MemoryMonitorViewModel.h"
+#include "viewmodels/ProcessMonitorViewModel.h"
 
 // Controllers and ViewModels will be registered here
 
 int main(int argc, char* argv[]) {
+  Q_INIT_RESOURCE(resources);
+
+  QQuickStyle::setStyle("Basic");
   QGuiApplication app(argc, argv);
 
   app.setOrganizationName("UNSA");
@@ -21,9 +31,25 @@ int main(int argc, char* argv[]) {
 
   QQmlApplicationEngine engine;
 
-  // TODO: Register custom types when implemented
-  // qmlRegisterType<SimulationController>("WaOS", 1, 0, "SimulationController");
-  // qmlRegisterType<ProcessMonitorViewModel>("WaOS", 1, 0, "ProcessMonitorViewModel");
+  // Instantiate Controller and ViewModels
+  auto* controller = new waos::gui::controllers::SimulationController(&app);
+  auto* processVM = new waos::gui::viewmodels::ProcessMonitorViewModel(&app);
+  auto* memoryVM = new waos::gui::viewmodels::MemoryMonitorViewModel(&app);
+  auto* logVM = new waos::gui::viewmodels::ExecutionLogViewModel(&app);
+  auto* blockingVM = new waos::gui::viewmodels::BlockingEventsViewModel(&app);
+
+  // Link them
+  controller->registerProcessViewModel(processVM);
+  controller->registerMemoryViewModel(memoryVM);
+  controller->registerExecutionLogViewModel(logVM);
+  controller->registerBlockingEventsViewModel(blockingVM);
+
+  // Register as context properties (Global objects in QML)
+  engine.rootContext()->setContextProperty("simulationController", controller);
+  engine.rootContext()->setContextProperty("processViewModel", processVM);
+  engine.rootContext()->setContextProperty("memoryViewModel", memoryVM);
+  engine.rootContext()->setContextProperty("executionLogViewModel", logVM);
+  engine.rootContext()->setContextProperty("blockingViewModel", blockingVM);
 
   // Load main QML
   const QUrl url(QStringLiteral("qrc:/main.qml"));

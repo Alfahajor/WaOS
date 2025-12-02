@@ -40,18 +40,17 @@ void test_metrics_calculation() {
   sim.start();
 
   // Ejecución Determinista Esperada:
-  // T0: Llegada P1, P2. CS P1 (Overhead).
-  // T1: P1 Run (1/2). (Wait P1 = 0)
-  // T2: P1 Run (2/2). Fin. (Turnaround P1 = T3 - T0 = 3).
-  // T3: CS P2 (Overhead).
-  // T4: P2 Run (1/2).
-  // T5: P2 Run (2/2). Fin. (Turnaround P2 = T6 - T0 = 6).
-  // Wait P2 = T3 (Momento selección) - T0 = 3.
+  // T0 (Inicio): Llegada P1, P2. Selección P1 (Inmediata). P1 Running.
+  // T1: P1 ejecuta (1/2).
+  // T2: P1 ejecuta (2/2). P1 Termina. Selección P2 (Inmediata). P2 Running.
+  //     (P1 FinishTime = 2, Turnaround = 2, Wait = 0).
+  // T3: P2 ejecuta (1/2).
+  // T4: P2 ejecuta (2/2). P2 Termina.
+  //     (P2 FinishTime = 4, Turnaround = 4, Wait = 2).
 
-  // Avg TA = (3 + 6) / 2 = 4.5
-  // Avg Wait = (0 + 3) / 2 = 1.5
+  // Avg Turnaround = (2 + 4) / 2 = 3.0
+  // Avg Wait = (0 + 2) / 2 = 1.0
 
-  // Corremos hasta que termine
   int maxTicks = 20;
   while(sim.isRunning() && maxTicks-- > 0) {
     sim.tick();
@@ -61,16 +60,12 @@ void test_metrics_calculation() {
 
   assert(metrics.completedProcesses == 2);
 
-  // Verificamos rangos razonables dado el overhead
-  // Avg Turnaround = (3 + 6) / 2 = 4.5
-  // Avg Wait = (1 + 4) / 2 = 2.5
-
   std::cout << "  -> Avg Wait: " << metrics.avgWaitTime << std::endl;
   std::cout << "  -> Avg Turnaround: " << metrics.avgTurnaroundTime << std::endl;
 
   // Tolerancia pequeña para floats
-  assert(std::abs(metrics.avgTurnaroundTime - 4.5) < 0.1);
-  assert(std::abs(metrics.avgWaitTime - 2.5) < 0.1);
+  assert(std::abs(metrics.avgTurnaroundTime - 3.0) < 0.1);
+  assert(std::abs(metrics.avgWaitTime - 1.0) < 0.1);
 
   std::cout << "[PASSED] test_metrics_calculation" << std::endl;
   std::remove(fname.c_str());
@@ -99,23 +94,25 @@ void test_preemption_logic() {
   sim.setMemoryManager(std::move(mem));
   sim.start();
 
-  // Tick 0: Llega P1.
+  // Tick 0: Llega P1. Se asigna inmediatamente
   sim.tick();
+  assert(sim.getRunningProcess() != nullptr);
+  assert(sim.getRunningProcess()->getPid() == 1);
 
-  // Tick 1: CS a P1.
+  // Tick 1: P1 se ejecuta
   sim.tick();
+  assert(sim.getRunningProcess()->getPid() == 1);
 
-  // Tick 2: P1 Ejecuta. Llega P2 (Prio 1).
-  // Aquí handleArrivals detecta que P2(1) < P1(2). Debe disparar Preemption.
+  // Tick 2: 
+  // handleCpuExecution: P1 Ejecuta su tick
+  // handleArrivals: Llega P2 (Prio 1 < Prio 2).
+  // Preemption activada: triggerContextSwitch(P1, P2). Overhead iniciado.
+  // Estado: runningProcess = nullptr, next = P2.
   sim.tick(); 
+  assert(sim.getRunningProcess() == nullptr); // Está en overhead de CS
 
-  // Estado esperado: P1 debe haber sido devuelto a Ready. CS debe estar ocurriendo para P2.
-  // Como hubo CS, runningProcess es null o P2 dependiendo de la lógica exacta de CS instantáneo vs diferido.
-  // En Simulator.cpp: triggerContextSwitch pone running=null, y next=P2.
-
-  assert(sim.getRunningProcess() == nullptr); // Está en CS
-
-  // Tick 3: CS Overhead (cambiando a P2).
+  // Tick 3: CS Overhead consume su tick.
+  // Al final del tick, el contador llega a 0 y P2 entra a running.
   sim.tick();
 
   // Tick 4: P2 debe estar corriendo.
@@ -123,13 +120,98 @@ void test_preemption_logic() {
 
   auto* running = sim.getRunningProcess();
   assert(running != nullptr);
-  assert(running->getPid() == 2); // ¡ÉXITO! P2 desplazó a P1.
+  assert(running->getPid() == 2); // P2 desplazó a P1.
 
   std::cout << "[PASSED] test_preemption_logic" << std::endl;
   std::remove(fname.c_str());
 }
 
-// TEST 3: Determinismo de Referencias de Memoria
+// TEST 3: Sin penalización al inicio
+void test_no_context_switch_overhead_on_start() {
+  std::cout << "[RUNNING] test_no_context_switch_overhead_on_start..." << std::endl;
+  std::string fname = "test_start_overhead.txt";
+
+  // P1: CPU(3).
+  createTempFile(fname, "P1 0 CPU(3) 1 1\n");
+
+  Simulator sim;
+  sim.loadProcesses(fname);
+
+  auto sched = std::make_unique<MockScheduler>();
+  auto mem = std::make_unique<MockMemoryManager>();
+  mem->everythingLoaded = true;
+
+  sim.setScheduler(std::move(sched));
+  sim.setMemoryManager(std::move(mem));
+  sim.start();
+
+  // T0: Llega P1. handleScheduling lo selecciona inmediatamente (Fix P1).
+  sim.tick(); 
+  
+  // Verificación: Debe estar corriendo YA, sin ticks de espera.
+  assert(sim.getRunningProcess() != nullptr);
+  assert(sim.getRunningProcess()->getPid() == 1);
+
+  // Ejecutar restante (T1, T2, T3 termina).
+  sim.tick();
+  sim.tick();
+  sim.tick();
+
+  assert(sim.getRunningProcess() == nullptr);
+  
+  // Verificar métrica de CS
+  auto metrics = sim.getSimulatorMetrics();
+  assert(metrics.totalContextSwitches == 0); 
+  assert(metrics.completedProcesses == 1);
+
+  std::cout << "[PASSED] test_no_context_switch_overhead_on_start" << std::endl;
+  std::remove(fname.c_str());
+}
+
+// TEST 4: Sin penalización al terminar (Fix P1)
+void test_no_cs_overhead_on_termination() {
+  std::cout << "[RUNNING] test_no_cs_overhead_on_termination..." << std::endl;
+  std::string fname = "test_term_overhead.txt";
+
+  // P1 y P2 llegan juntos. FIFO. P1(1), P2(1).
+  createTempFile(fname, 
+    "P1 0 CPU(1) 1 1\n"
+    "P2 0 CPU(1) 1 1\n"
+  );
+
+  Simulator sim;
+  sim.loadProcesses(fname);
+  
+  auto sched = std::make_unique<MockScheduler>();
+  auto mem = std::make_unique<MockMemoryManager>();
+  mem->everythingLoaded = true;
+
+  sim.setScheduler(std::move(sched));
+  sim.setMemoryManager(std::move(mem));
+  sim.start();
+
+  // T0: Llega P1, P2. P1 seleccionado inmediato.
+  sim.tick();
+  assert(sim.getRunningProcess()->getPid() == 1);
+
+  // T1: P1 ejecuta (1/1) y termina.
+  // handleScheduling detecta CPU libre y selecciona P2 inmediato (Fix P1).
+  sim.tick();
+  
+  // Verificación: P2 debe estar corriendo inmediatamente en el siguiente tick disponible,
+  // sin ticks vacíos intermedios.
+  assert(sim.getRunningProcess() != nullptr);
+  assert(sim.getRunningProcess()->getPid() == 2);
+
+  // Verificar métrica de CS
+  auto metrics = sim.getSimulatorMetrics();
+  assert(metrics.totalContextSwitches == 0);
+
+  std::cout << "[PASSED] test_no_cs_overhead_on_termination" << std::endl;
+  std::remove(fname.c_str());
+}
+
+// TEST 5: Determinismo de Referencias de Memoria
 void test_memory_reference_determinism() {
   std::cout << "[RUNNING] test_memory_reference_determinism..." << std::endl;
 
@@ -171,6 +253,9 @@ void test_memory_reference_determinism() {
 int main() {
   test_metrics_calculation();
   test_preemption_logic();
+  test_no_context_switch_overhead_on_start();
+  test_no_cs_overhead_on_termination();
   test_memory_reference_determinism();
+
   return 0;
 }
