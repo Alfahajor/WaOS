@@ -58,8 +58,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             height: 40
-            color: "#313244"
-            radius: 5
+            color: "transparent"
             
             RowLayout {
                 anchors.fill: parent
@@ -124,25 +123,29 @@ Rectangle {
                     Label { text: model.modelData.waitTime; Layout.preferredWidth: 60; color: textColor }
                     Label { text: model.modelData.cpuTime; Layout.preferredWidth: 60; color: textColor }
                     
-                    // Burst Progress (Dot Matrix)
+                    // Burst Progress (Eye Candy)
                     Row {
                         Layout.fillWidth: true
                         height: 12
                         spacing: 4
                         
-                        property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 // Mock progress
+                        // Mock logic as requested (burstDone / burstTotal not available in model)
+                        property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 
                         property bool isBlocked: model.modelData.state.toString().startsWith("Bloqueado")
 
                         Repeater {
                             model: 10
                             Rectangle {
-                                width: 6; height: 6
-                                radius: 3
+                                width: 8; height: 8
+                                radius: 4
                                 color: {
                                     if (index < parent.progress) {
-                                        return parent.isBlocked ? "#f38ba8" : accentColor
+                                        // Active
+                                        if (parent.isBlocked) return "#f38ba8" // Red
+                                        return "#89dceb" // Cyan
                                     } else {
-                                        return "#313244" // Inactive gray
+                                        // Inactive
+                                        return "#333333" // Dark Gray
                                     }
                                 }
                             }

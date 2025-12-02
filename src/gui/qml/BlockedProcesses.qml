@@ -52,15 +52,15 @@ Item {
                     
                     delegate: Item {
                         visible: model.modelData.state === "Listo"
-                        width: visible ? 40 : 0
+                        width: visible ? 50 : 0
                         height: parent.height
                         
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: 2
-                            color: bgSwimlane
+                            color: "#2a2a35"
                             radius: 4
-                            border.color: "#89b4fa"
+                            border.color: "#f9e2af" // Yellow/Gold
                             border.width: 1
                             
                             Text {
@@ -110,18 +110,18 @@ Item {
                     model: blockingViewModel.ioBlockedList
                     
                     delegate: Rectangle {
-                        width: 40
+                        width: 50
                         height: parent.height - 4
                         anchors.verticalCenter: parent.verticalCenter
-                        color: bgSwimlane
+                        color: "#2a2a35"
                         radius: 4
-                        border.color: "#f38ba8"
+                        border.color: "#f38ba8" // Red
                         border.width: 1
                         
                         Text {
                             anchors.centerIn: parent
                             text: "P" + model.modelData.pid
-                            color: textColor
+                            color: "#f38ba8" // Red Text
                             font.bold: true
                             font.pixelSize: 12
                         }
@@ -164,12 +164,12 @@ Item {
                     model: blockingViewModel.memoryBlockedList
                     
                     delegate: Rectangle {
-                        width: 40
+                        width: 50
                         height: parent.height - 4
                         anchors.verticalCenter: parent.verticalCenter
-                        color: bgSwimlane
+                        color: "#2a2a35"
                         radius: 4
-                        border.color: "#fab387"
+                        border.color: "#fab387" // Orange
                         border.width: 1
                         
                         Text {
