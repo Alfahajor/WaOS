@@ -3,11 +3,6 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.15
 
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Window 2.15
-import QtQuick.Layouts 1.15
-
 ApplicationWindow {
     id: mainWindow
     visible: true
@@ -40,40 +35,19 @@ ApplicationWindow {
             // --- Header Moderno ---
             Rectangle {
                 Layout.fillWidth: true
-                height: 70
+                height: 50
                 color: "transparent"
                 
                 RowLayout {
                     anchors.fill: parent
                     
-                    // Logo / Title
-                    Rectangle {
-                        width: 60
-                        height: 60
-                        radius: 15
-                        color: mainWindow.accentSecondary
-                        
-                        Text {
-                            anchors.centerIn: parent
-                            text: "OS"
-                            font.bold: true
-                            font.pixelSize: 24
-                            color: "#11111b"
-                        }
-                    }
-                    
-                    Column {
-                        Text {
-                            text: "WaOS Simulator"
-                            font.pixelSize: 28
-                            font.bold: true
-                            color: mainWindow.textColor
-                        }
-                        Text {
-                            text: "Advanced Scheduling & Memory Visualization"
-                            font.pixelSize: 14
-                            color: mainWindow.textMuted
-                        }
+                    // Title Only
+                    Text {
+                        text: "WaOS - Simulator"
+                        font.pixelSize: 24
+                        font.bold: true
+                        color: mainWindow.textColor
+                        Layout.alignment: Qt.AlignVCenter
                     }
                     
                     Item { Layout.fillWidth: true } // Spacer
