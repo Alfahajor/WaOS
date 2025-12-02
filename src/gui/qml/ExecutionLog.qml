@@ -3,35 +3,53 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Rectangle {
-    border.color: "#ccc"
+    color: "transparent"
     clip: true
+
+    // Theme Colors
+    property color textColor: "#cdd6f4"
+    property color logColor: "#a6e3a1" // Green terminal text
+    property color bgConsole: "#11111b" // Darker console background
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 10
+        anchors.margins: 20
+        spacing: 10
 
         Label {
-            text: "Log de Ejecución (CPU)"
+            text: "System Execution Log"
             font.bold: true
-            font.pixelSize: 16
+            font.pixelSize: 20
+            color: textColor
         }
 
-        ListView {
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            model: executionLogViewModel
-            clip: true
+            color: bgConsole
+            radius: 8
+            border.color: "#313244"
             
-            delegate: Text {
-                text: model.message
-                font.family: "Consolas"
-                font.pixelSize: 14
-                padding: 2
-            }
+            ListView {
+                anchors.fill: parent
+                anchors.margins: 10
+                model: executionLogViewModel
+                clip: true
+                spacing: 2
+                
+                delegate: Text {
+                    text: "> " + model.message
+                    font.family: "Consolas"
+                    font.pixelSize: 13
+                    color: logColor
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                }
 
-            // Auto-scroll to bottom
-            onCountChanged: {
-                positionViewAtEnd()
+                // Auto-scroll to bottom
+                onCountChanged: {
+                    positionViewAtEnd()
+                }
             }
         }
     }

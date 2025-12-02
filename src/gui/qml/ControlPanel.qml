@@ -6,17 +6,22 @@ import QtCore
 
 Rectangle {
     id: controlPanel
-    color: "#f5f5f5"
-    border.color: "#dcdcdc"
+    color: "transparent" // Parent handles background
     
     // Allow the height to adjust to content
     implicitHeight: mainCol.implicitHeight + 20
     Layout.fillWidth: true
 
+    // Theme Colors (Matching Main.qml)
+    property color bgInput: "#252535"
+    property color borderColor: "#313244"
+    property color textColor: "#cdd6f4"
+    property color accentColor: "#89b4fa"
+
     ColumnLayout {
         id: mainCol
         anchors.fill: parent
-        anchors.margins: 10
+        anchors.margins: 0
         spacing: 15
 
         // --- Section 1: Configuration (Scheduler & Memory) ---
@@ -26,40 +31,126 @@ Rectangle {
 
             // Scheduler Configuration
             RowLayout {
-                spacing: 8
-                Label { text: "Scheduler:"; font.bold: true }
+                spacing: 10
+                Label { text: "Scheduler"; color: controlPanel.textColor; font.bold: true }
                 ComboBox {
                     id: schedulerCombo
                     model: ["FCFS", "Round Robin", "SJF", "Priority"]
                     currentIndex: 0
-                    Layout.preferredWidth: 140
+                    Layout.preferredWidth: 160
+                    
+                    delegate: ItemDelegate {
+                        width: schedulerCombo.width
+                        contentItem: Text {
+                            text: modelData
+                            color: controlPanel.textColor
+                            font: schedulerCombo.font
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            color: schedulerCombo.highlightedIndex === index ? controlPanel.accentColor : controlPanel.bgInput
+                            opacity: schedulerCombo.highlightedIndex === index ? 0.3 : 1.0
+                        }
+                        highlighted: schedulerCombo.highlightedIndex === index
+                    }
+
+                    contentItem: Text {
+                        leftPadding: 10
+                        rightPadding: schedulerCombo.indicator.width + spacing
+                        text: schedulerCombo.displayText
+                        font: schedulerCombo.font
+                        color: controlPanel.textColor
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+
+                    background: Rectangle {
+                        implicitWidth: 120
+                        implicitHeight: 40
+                        color: controlPanel.bgInput
+                        border.color: controlPanel.borderColor
+                        radius: 6
+                    }
                 }
             }
 
             // Quantum (Only for Round Robin)
             RowLayout {
                 visible: schedulerCombo.currentText === "Round Robin"
-                spacing: 8
-                Label { text: "Quantum:"; font.bold: true }
+                spacing: 10
+                Label { text: "Quantum"; color: controlPanel.textColor; font.bold: true }
                 SpinBox {
                     id: quantumSpin
                     from: 1
                     to: 100
                     value: 5
                     editable: true
-                    Layout.preferredWidth: 100
+                    Layout.preferredWidth: 120
+                    
+                    contentItem: TextInput {
+                        z: 2
+                        text: quantumSpin.textFromValue(quantumSpin.value, quantumSpin.locale)
+                        font: quantumSpin.font
+                        color: controlPanel.textColor
+                        selectionColor: controlPanel.accentColor
+                        selectedTextColor: "#ffffff"
+                        horizontalAlignment: Qt.AlignHCenter
+                        verticalAlignment: Qt.AlignVCenter
+                        readOnly: !quantumSpin.editable
+                        validator: quantumSpin.validator
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    }
+
+                    background: Rectangle {
+                        implicitWidth: 140
+                        color: controlPanel.bgInput
+                        border.color: controlPanel.borderColor
+                        radius: 6
+                    }
                 }
             }
 
             // Memory Configuration
             RowLayout {
-                spacing: 8
-                Label { text: "Memory:"; font.bold: true }
+                spacing: 10
+                Label { text: "Memory"; color: controlPanel.textColor; font.bold: true }
                 ComboBox {
                     id: memoryCombo
                     model: ["FIFO", "LRU", "Optimal"]
                     currentIndex: 0
-                    Layout.preferredWidth: 120
+                    Layout.preferredWidth: 140
+                    
+                    delegate: ItemDelegate {
+                        width: memoryCombo.width
+                        contentItem: Text {
+                            text: modelData
+                            color: controlPanel.textColor
+                            font: memoryCombo.font
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            color: memoryCombo.highlightedIndex === index ? controlPanel.accentColor : controlPanel.bgInput
+                            opacity: memoryCombo.highlightedIndex === index ? 0.3 : 1.0
+                        }
+                    }
+
+                    contentItem: Text {
+                        leftPadding: 10
+                        text: memoryCombo.displayText
+                        font: memoryCombo.font
+                        color: controlPanel.textColor
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        implicitWidth: 120
+                        implicitHeight: 40
+                        color: controlPanel.bgInput
+                        border.color: controlPanel.borderColor
+                        radius: 6
+                    }
                 }
             }
             
@@ -69,10 +160,10 @@ Rectangle {
         // --- Section 2: File Selection ---
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: 15
             enabled: !simulationController.isRunning
 
-            Label { text: "Processes File:"; font.bold: true }
+            Label { text: "Process File"; color: controlPanel.textColor; font.bold: true }
             
             TextField {
                 id: pathField
@@ -80,17 +171,71 @@ Rectangle {
                 Layout.fillWidth: true
                 placeholderText: "Select a process file..."
                 selectByMouse: true
-                readOnly: false 
+                color: controlPanel.textColor
+                selectionColor: controlPanel.accentColor
+                
+                background: Rectangle {
+                    implicitHeight: 40
+                    color: controlPanel.bgInput
+                    border.color: controlPanel.borderColor
+                    radius: 6
+                }
             }
 
             Button {
-                text: "Browse..."
+                text: "Browse"
+                
+                contentItem: RowLayout {
+                    spacing: 5
+                    Image { 
+                        source: "qrc:/icons/folder.svg"
+                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        fillMode: Image.PreserveAspectFit
+                        visible: true
+                    }
+                    Text { 
+                        text: "Browse"
+                        color: controlPanel.textColor
+                        font.bold: true
+                    }
+                }
+
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 40
+                    color: parent.down ? Qt.darker(controlPanel.bgInput, 1.2) : controlPanel.bgInput
+                    border.color: controlPanel.borderColor
+                    radius: 6
+                }
+                
                 onClicked: fileDialog.open()
             }
 
             Button {
                 text: "Load & Apply"
-                highlighted: true
+                
+                contentItem: RowLayout {
+                    spacing: 5
+                    Image { 
+                        source: "qrc:/icons/check.svg"
+                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        fillMode: Image.PreserveAspectFit
+                        visible: true
+                    }
+                    Text { 
+                        text: "Apply Config"
+                        color: "#11111b" // Dark text on accent
+                        font.bold: true
+                    }
+                }
+
+                background: Rectangle {
+                    implicitWidth: 140
+                    implicitHeight: 40
+                    color: parent.down ? Qt.darker(controlPanel.accentColor, 1.2) : controlPanel.accentColor
+                    radius: 6
+                }
+
                 onClicked: {
                     simulationController.configure(
                         schedulerCombo.currentText,
@@ -101,13 +246,6 @@ Rectangle {
                 }
             }
         }
-
-                // --- Section 3: Simulation Controls ---
-        // Removed redundant controls here as they are now in the floating bar
-        Item { Layout.fillWidth: true; height: 10 } 
-    }
-
-    FileDialog {
     }
 
     FileDialog {

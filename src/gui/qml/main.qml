@@ -3,249 +3,332 @@ import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.15
 
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
+import QtQuick.Layouts 1.15
+
 ApplicationWindow {
     id: mainWindow
     visible: true
     width: 1400
     height: 900
-    title: "WaOS - Monitor del Sistema Operativo"
-    
+    title: "WaOS - Simulator"
+    color: "#11111b" // Background Dark
+
+    // --- Theme Palette (Dracula/Catppuccin inspired) ---
+    property color bgDark: "#11111b"
+    property color bgSurface: "#1e1e2e"
+    property color bgCard: "#252535"
+    property color accentColor: "#89b4fa" // Blue
+    property color accentSecondary: "#cba6f7" // Purple
+    property color successColor: "#a6e3a1"
+    property color errorColor: "#f38ba8"
+    property color textColor: "#cdd6f4"
+    property color textMuted: "#a6adc8"
+    property color borderColor: "#313244"
+
     Rectangle {
         anchors.fill: parent
-        color: "#ECEFF1"
+        color: mainWindow.bgDark
         
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 10
-            spacing: 10
+            anchors.margins: 20
+            spacing: 15
             
-            // Header
+            // --- Header Moderno ---
             Rectangle {
                 Layout.fillWidth: true
-                height: 60
-                color: "#1976D2"
-                radius: 5
+                height: 70
+                color: "transparent"
                 
-                Text {
-                    anchors.centerIn: parent
-                    text: "WAOS - SIMULADOR DE SISTEMA OPERATIVO"
-                    font.pixelSize: 24
-                    font.bold: true
-                    color: "white"
+                RowLayout {
+                    anchors.fill: parent
+                    
+                    // Logo / Title
+                    Rectangle {
+                        width: 60
+                        height: 60
+                        radius: 15
+                        color: mainWindow.accentSecondary
+                        
+                        Text {
+                            anchors.centerIn: parent
+                            text: "OS"
+                            font.bold: true
+                            font.pixelSize: 24
+                            color: "#11111b"
+                        }
+                    }
+                    
+                    Column {
+                        Text {
+                            text: "WaOS Simulator"
+                            font.pixelSize: 28
+                            font.bold: true
+                            color: mainWindow.textColor
+                        }
+                        Text {
+                            text: "Advanced Scheduling & Memory Visualization"
+                            font.pixelSize: 14
+                            color: mainWindow.textMuted
+                        }
+                    }
+                    
+                    Item { Layout.fillWidth: true } // Spacer
+                    
+                    // Metrics Summary (Placeholder for top right stats)
+                    RowLayout {
+                        spacing: 15
+                        Rectangle {
+                            width: 120; height: 50; radius: 8
+                            color: mainWindow.bgSurface
+                            border.color: mainWindow.borderColor
+                            Column {
+                                anchors.centerIn: parent
+                                Text { text: "CPU Util"; color: mainWindow.textMuted; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
+                                Text { text: "0%"; color: mainWindow.successColor; font.bold: true; font.pixelSize: 16; anchors.horizontalCenter: parent.horizontalCenter }
+                            }
+                        }
+                    }
                 }
             }
             
-            // Control Panel
+            // --- Control Panel (Config) ---
             ControlPanel {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 80
             }
             
-            // Main Content Area with Tabs
+            // --- Main Content Area ---
+            // Styled Tab Bar
             TabBar {
                 id: tabBar
                 Layout.fillWidth: true
+                background: Rectangle { color: "transparent" }
                 
-                TabButton {
-                    text: "Planificación"
-                }
-                TabButton {
-                    text: "Memoria"
-                }
-                TabButton {
-                    text: "Log de Ejecución"
+                Repeater {
+                    model: ["Dashboard", "Memory Map", "System Logs"]
+                    TabButton {
+                        text: modelData
+                        width: implicitWidth + 40
+                        
+                        contentItem: Text {
+                            text: parent.text
+                            font.bold: true
+                            color: parent.checked ? mainWindow.accentColor : mainWindow.textMuted
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        
+                        background: Rectangle {
+                            color: parent.checked ? "#2089b4fa" : "transparent"
+                            radius: 5
+                            border.width: 0
+                            
+                            Rectangle {
+                                width: parent.width
+                                height: 3
+                                anchors.bottom: parent.bottom
+                                color: mainWindow.accentColor
+                                visible: parent.parent.checked
+                            }
+                        }
+                    }
                 }
             }
             
-            StackLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                currentIndex: tabBar.currentIndex
-                
-                // Panel de Planificación
-                ProcessMonitor {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                }
-                
-                // Panel de Memoria
-                MemoryMonitor {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                }
-                
-                // Log de Ejecución
-                ExecutionLog {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                }
-            }
-            
-            // Panel de Bloqueos (Persistente)
-            BlockingPanel {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 200
-            }
-            
-            // Footer
+            // Content Stack
             Rectangle {
                 Layout.fillWidth: true
-                height: 30
-                color: "#37474F"
-                radius: 3
-                
-                Text {
-                    anchors.centerIn: parent
-                    text: "UNSA - Curso de Sistemas Operativos 2025"
-                    font.pixelSize: 12
-                    color: "white"
+                Layout.fillHeight: true
+                color: mainWindow.bgSurface
+                radius: 12
+                border.color: mainWindow.borderColor
+                border.width: 1
+                clip: true
+
+                StackLayout {
+                    anchors.fill: parent
+                    anchors.margins: 1
+                    currentIndex: tabBar.currentIndex
+                    
+                    // View 1: Process Monitor (Dashboard)
+                    ProcessMonitor {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
+                    
+                    // View 2: Memory Monitor
+                    MemoryMonitor {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
+                    
+                    // View 3: Logs
+                    ExecutionLog {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                    }
                 }
+            }
+            
+            // --- Blocking Panel (Bottom) ---
+            BlockingPanel {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 180
             }
         }
 
         // --- Floating Control Bar ---
         Rectangle {
             id: floatingControls
-            width: 600
-            height: 70
-            radius: 35
-            color: "#ffffff"
-            border.color: "#e0e0e0"
+            width: 500
+            height: 80
+            radius: 40
+            color: mainWindow.bgSurface
+            border.color: mainWindow.borderColor
             border.width: 1
             
-            // Shadow effect (simulated with a darker rectangle behind if DropShadow not available, 
-            // but here we use simple z-ordering and border)
-            z: 100 
-
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 50
+            anchors.bottomMargin: 40
             anchors.horizontalCenter: parent.horizontalCenter
-
-            // Shadow simulation
+            
+            // Shadow (simulated)
             Rectangle {
                 anchors.fill: parent
-                anchors.topMargin: 2
-                anchors.leftMargin: 2
+                anchors.topMargin: 4
+                anchors.leftMargin: 4
                 z: -1
-                radius: 35
-                color: "#20000000"
+                radius: 40
+                color: "#40000000"
             }
 
             RowLayout {
                 anchors.centerIn: parent
-                spacing: 20
+                spacing: 25
 
-                // Reset (Square Icon)
+                // Reset
                 RoundButton {
-                    Layout.preferredWidth: 40
-                    Layout.preferredHeight: 40
+                    Layout.preferredWidth: 45
+                    Layout.preferredHeight: 45
                     onClicked: simulationController.reset()
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Reset Simulation"
                     
-                    contentItem: Rectangle {
+                    background: Rectangle {
+                        radius: 22.5
+                        color: parent.down ? mainWindow.bgCard : "transparent"
+                        border.color: mainWindow.borderColor
+                        border.width: 1
+                    }
+                    
+                    contentItem: Image {
+                        source: "qrc:/icons/reset.svg"
                         anchors.centerIn: parent
-                        width: 14
-                        height: 14
-                        color: "#555555"
+                        width: 20; height: 20
+                        fillMode: Image.PreserveAspectFit
+                        // Fallback if icon missing (user will add later)
+                        sourceSize.width: 20
+                        sourceSize.height: 20
                     }
                 }
 
-                // Step (Arrow + Bar Icon)
+                // Step
                 RoundButton {
-                    Layout.preferredWidth: 40
-                    Layout.preferredHeight: 40
+                    Layout.preferredWidth: 45
+                    Layout.preferredHeight: 45
                     enabled: !simulationController.isRunning
                     onClicked: simulationController.step()
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Step Forward"
-
-                    contentItem: Canvas {
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.fillStyle = parent.enabled ? "#555555" : "#aaaaaa";
-                            ctx.reset();
-                            
-                            // Triangle
-                            ctx.beginPath();
-                            ctx.moveTo(0, 0);
-                            ctx.lineTo(12, 10);
-                            ctx.lineTo(0, 20);
-                            ctx.closePath();
-                            ctx.fill();
-                            
-                            // Bar
-                            ctx.beginPath();
-                            ctx.rect(14, 0, 4, 20);
-                            ctx.fill();
-                        }
+                    
+                    background: Rectangle {
+                        radius: 22.5
+                        color: parent.down ? mainWindow.bgCard : "transparent"
+                        border.color: mainWindow.borderColor
+                        border.width: 1
+                        opacity: parent.enabled ? 1.0 : 0.5
+                    }
+                    
+                    contentItem: Image {
+                        source: "qrc:/icons/step.svg"
+                        anchors.centerIn: parent
+                        width: 20; height: 20
+                        fillMode: Image.PreserveAspectFit
                     }
                 }
 
-                // Play/Pause (Big Button)
+                // Play/Pause (Hero Button)
                 RoundButton {
-                    Layout.preferredWidth: 60
-                    Layout.preferredHeight: 60
+                    Layout.preferredWidth: 65
+                    Layout.preferredHeight: 65
                     highlighted: true
                     onClicked: {
                         if (simulationController.isRunning) simulationController.stop()
                         else simulationController.start()
                     }
-                    ToolTip.visible: hovered
-                    ToolTip.text: simulationController.isRunning ? "Pause" : "Start"
                     
-                    contentItem: Item {
-                        anchors.fill: parent
+                    background: Rectangle {
+                        radius: 32.5
+                        color: mainWindow.accentColor
                         
-                        // Play Icon (Triangle)
-                        Canvas {
+                        // Glow effect
+                        Rectangle {
                             anchors.fill: parent
-                            visible: !simulationController.isRunning
-                            onPaint: {
-                                var ctx = getContext("2d");
-                                ctx.fillStyle = "#ffffff";
-                                ctx.reset();
-                                ctx.beginPath();
-                                ctx.moveTo(22, 18);
-                                ctx.lineTo(42, 30);
-                                ctx.lineTo(22, 42);
-                                ctx.closePath();
-                                ctx.fill();
-                            }
+                            radius: 32.5
+                            color: mainWindow.accentColor
+                            opacity: 0.3
+                            scale: 1.1
+                            z: -1
                         }
-                        
-                        // Pause Icon (Bars)
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            visible: simulationController.isRunning
-                            Rectangle { width: 6; height: 24; color: "#ffffff" }
-                            Rectangle { width: 6; height: 24; color: "#ffffff" }
-                        }
+                    }
+                    
+                    contentItem: Image {
+                        source: simulationController.isRunning ? "qrc:/icons/pause.svg" : "qrc:/icons/play.svg"
+                        anchors.centerIn: parent
+                        width: 28; height: 28
+                        fillMode: Image.PreserveAspectFit
                     }
                 }
 
                 // Speed Control
                 RowLayout {
-                    spacing: 8
-                    Label { text: "Slow"; font.pixelSize: 10; color: "#666" }
+                    spacing: 10
+                    Text { text: "Speed"; color: mainWindow.textMuted; font.pixelSize: 12 }
                     Slider {
                         from: 100
                         to: 2000
                         value: simulationController.tickInterval
                         onMoved: simulationController.tickInterval = value
-                        Layout.preferredWidth: 120
+                        Layout.preferredWidth: 100
+                        
+                        background: Rectangle {
+                            x: parent.leftPadding
+                            y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                            implicitWidth: 200
+                            implicitHeight: 4
+                            width: parent.availableWidth
+                            height: implicitHeight
+                            radius: 2
+                            color: mainWindow.bgCard
+                            
+                            Rectangle {
+                                width: parent.parent.visualPosition * parent.width
+                                height: parent.height
+                                color: mainWindow.accentColor
+                                radius: 2
+                            }
+                        }
+                        
+                        handle: Rectangle {
+                            x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                            y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                            implicitWidth: 16
+                            implicitHeight: 16
+                            radius: 8
+                            color: mainWindow.accentColor
+                            border.color: mainWindow.bgDark
+                            border.width: 2
+                        }
                     }
-                    Label { text: "Fast"; font.pixelSize: 10; color: "#666" }
-                }
-                
-                Label { 
-                    text: simulationController.tickInterval + " ms" 
-                    font.family: "Monospace"
-                    font.bold: true
-                    color: "#555"
                 }
             }
         }
