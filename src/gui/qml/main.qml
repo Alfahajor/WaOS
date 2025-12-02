@@ -488,7 +488,7 @@ ApplicationWindow {
                                             id: hitCanvas
                                             anchors.centerIn: parent
                                             width: 80; height: 80
-                                            property real value: 85 // Mock value as backend returns "-"
+                                            property real value: memoryViewModel.hitRatio
                                             onValueChanged: requestPaint()
                                             
                                             onPaint: {
@@ -519,7 +519,7 @@ ApplicationWindow {
                                         Column {
                                             anchors.centerIn: parent
                                             Text { 
-                                                text: "85%" // Mock
+                                                text: memoryViewModel.hitRatio.toFixed(1) + "%"
                                                 color: mainWindow.textColor
                                                 font.bold: true
                                                 font.pixelSize: 16

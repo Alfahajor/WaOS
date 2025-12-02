@@ -40,35 +40,43 @@ Item {
                 }
                 
                 // Horizontal List
-                ListView {
+                Flickable {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    orientation: ListView.Horizontal
                     clip: true
-                    spacing: 5
+                    contentWidth: readyRow.width
+                    contentHeight: height
                     
-                    // Filter processList for "Listo" state
-                    model: processViewModel.processList
-                    
-                    delegate: Item {
-                        visible: model.modelData.state === "Listo"
-                        width: visible ? 50 : 0
+                    Row {
+                        id: readyRow
+                        spacing: 5
                         height: parent.height
                         
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: 2
-                            color: "#2a2a35"
-                            radius: 4
-                            border.color: "#f9e2af" // Yellow/Gold
-                            border.width: 1
+                        Repeater {
+                            model: processViewModel.processList
                             
-                            Text {
-                                anchors.centerIn: parent
-                                text: "P" + model.modelData.pid
-                                color: textColor
-                                font.bold: true
-                                font.pixelSize: 12
+                            delegate: Item {
+                                visible: model.modelData.state === "Listo"
+                                width: visible ? 50 : 0
+                                height: parent.height
+                                
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    color: "#2a2a35"
+                                    radius: 4
+                                    border.color: "#f9e2af" // Yellow/Gold
+                                    border.width: 1
+                                    visible: parent.visible
+                                    
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "P" + model.modelData.pid
+                                        color: textColor
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                    }
+                                }
                             }
                         }
                     }
