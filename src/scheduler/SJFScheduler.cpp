@@ -1,9 +1,16 @@
 #include "waos/scheduler/SJFScheduler.h"
 #include "waos/core/Process.h"
 #include <iostream>
-#include <algorithm>
 
 namespace waos::scheduler {
+
+// Comparator implementation: returns true if 'a' has LOWER priority than 'b'
+// (priority_queue is a max-heap by default, so we invert to get min-heap behavior)
+bool SJFScheduler::ProcessComparator::operator()(waos::core::Process* a, waos::core::Process* b) const {
+    // Return true if 'a' should come AFTER 'b' in the queue (a has longer burst)
+    // This makes processes with SHORTER bursts have HIGHER priority
+    return a->getCurrentBurstDuration() > b->getCurrentBurstDuration();
+}
 
 SJFScheduler::SJFScheduler() {
     m_metrics.totalSchedulingDecisions = 0;
@@ -13,13 +20,8 @@ void SJFScheduler::addProcess(waos::core::Process* p) {
     if (!p) return;
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    m_pool.push_back(p);
-
-    // Sort logic: Shortest Current Burst first
-    std::sort(m_pool.begin(), m_pool.end(),
-        [](waos::core::Process* a, waos::core::Process* b) {
-            return a->getCurrentBurstDuration() < b->getCurrentBurstDuration();
-        });
+    // O(log n) insertion into priority queue (min-heap by burst duration)
+    m_priorityQueue.push(p);
     
     std::cout << "  [SJF] Added P" << p->getPid() 
               << " (burst=" << p->getCurrentBurstDuration() << ") to ready queue" << std::endl;
@@ -28,10 +30,11 @@ void SJFScheduler::addProcess(waos::core::Process* p) {
 
 waos::core::Process* SJFScheduler::getNextProcess() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_pool.empty()) return nullptr;
+    if (m_priorityQueue.empty()) return nullptr;
 
-    waos::core::Process* p = m_pool.front();
-    m_pool.erase(m_pool.begin());
+    // O(log n) extraction of process with minimum burst duration
+    waos::core::Process* p = m_priorityQueue.top();
+    m_priorityQueue.pop();
 
     m_metrics.totalSchedulingDecisions++;
     m_metrics.selectionCount[p->getPid()]++;
@@ -43,7 +46,7 @@ waos::core::Process* SJFScheduler::getNextProcess() {
 
 bool SJFScheduler::hasReadyProcesses() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-    return !m_pool.empty();
+    return !m_priorityQueue.empty();
 }
 
 int SJFScheduler::getTimeSlice() const {
@@ -52,12 +55,23 @@ int SJFScheduler::getTimeSlice() const {
 
 std::vector<const waos::core::Process*> SJFScheduler::peekReadyQueue() const {
     std::lock_guard<std::mutex> lock(m_mutex);
-    // Vector directo, fácil de convertir
-    return std::vector<const waos::core::Process*>(m_pool.begin(), m_pool.end());
+    
+    // Copy priority queue to vector for observation
+    // Note: This requires extracting all elements - O(n log n) operation
+    // This is acceptable since peekReadyQueue is used infrequently (only for debugging/monitoring)
+    auto temp_pq = m_priorityQueue;
+    std::vector<const waos::core::Process*> result;
+    
+    while (!temp_pq.empty()) {
+        result.push_back(temp_pq.top());
+        temp_pq.pop();
+    }
+    
+    return result;
 }
 
 std::string SJFScheduler::getAlgorithmName() const {
-    return "SJF (Shortest Job First)";
+    return "SJF (Shortest Job First - Priority Queue)";
 }
 
 waos::common::SchedulerMetrics SJFScheduler::getSchedulerMetrics() const {
