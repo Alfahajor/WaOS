@@ -298,19 +298,19 @@ void Simulator::handleCpuExecution() {
   if (!m_runningProcess) return;
 
   // MMU Check (Hardware Instruction Fetch simulation)
-  // std::cout << "[DEBUG] Checking Page Requirement" << std::endl;
   int pageRequired = m_runningProcess->getCurrentPageRequirement();
-  // std::cout << "[DEBUG] Page Required: " << pageRequired << std::endl;
 
-  if (!m_memoryManager->isPageLoaded(m_runningProcess->getPid(), pageRequired)) {
-    // Page Fault Exception
+  // Request page - this counts hits AND faults
+  waos::memory::PageRequestResult result = m_memoryManager->requestPage(m_runningProcess->getPid(), pageRequired);
+
+  if (result != waos::memory::PageRequestResult::HIT) {
+    // Page Fault Exception (either PAGE_FAULT or REPLACEMENT)
     emit logMessage(QString("Page Fault during exec: P%1 needs Page %2")
                         .arg(m_runningProcess->getPid())
                         .arg(pageRequired));
 
     m_runningProcess->incrementPageFaults();
     m_totalPageFaults++;
-    m_memoryManager->requestPage(m_runningProcess->getPid(), pageRequired);
 
     m_runningProcess->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
     emit processStateChanged(m_runningProcess->getPid(), ProcessState::WAITING_MEMORY);
@@ -319,6 +319,7 @@ void Simulator::handleCpuExecution() {
     m_runningProcess = nullptr;  // Immediate yield on fault
     return;                      // Tick used for the faulting instruction attempt
   }
+  // else: Page HIT - continue execution
 
   // ORCHESTRATION: Wake up the thread
   m_systemMonitor.dispatch(m_runningProcess);
