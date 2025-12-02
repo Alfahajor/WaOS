@@ -3,90 +3,119 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Rectangle {
-    color: "#f5f5f5"
-    border.color: "#ddd"
-    border.width: 1
+    color: "transparent" // Transparent to blend with main background
+    
+    // Theme Colors
+    property color textColor: "#cdd6f4"
+    property color bgCard: "#252535"
+    property color borderColor: "#313244"
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 10
+        anchors.margins: 0
         spacing: 20
 
         // I/O Blocked List
-        ColumnLayout {
+        Rectangle {
             Layout.fillHeight: true
             Layout.preferredWidth: parent.width * 0.3
+            color: bgCard
+            radius: 8
+            border.color: borderColor
             
-            Label { text: "Bloqueados por E/S"; font.bold: true; color: "#D32F2F" }
-            
-            ListView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                model: blockingViewModel.ioBlockedList
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                Label { text: "Blocked (I/O)"; font.bold: true; color: "#f38ba8" } // Red
                 
-                delegate: Rectangle {
-                    width: parent.width
-                    height: 30
-                    color: "white"
-                    border.color: "#eee"
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: blockingViewModel.ioBlockedList
+                    spacing: 5
                     
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 5
-                        Label { text: "PID " + model.modelData.pid; font.bold: true }
-                        Label { text: model.modelData.info; color: "#666" }
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 35
+                        color: "#1e1e2e"
+                        radius: 4
+                        
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            Label { text: "PID " + model.modelData.pid; font.bold: true; color: textColor }
+                            Label { text: model.modelData.info; color: "#a6adc8" }
+                        }
                     }
                 }
             }
         }
 
         // Memory Blocked List
-        ColumnLayout {
+        Rectangle {
             Layout.fillHeight: true
             Layout.preferredWidth: parent.width * 0.3
+            color: bgCard
+            radius: 8
+            border.color: borderColor
             
-            Label { text: "Esperando Memoria"; font.bold: true; color: "#F57C00" }
-            
-            ListView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                model: blockingViewModel.memoryBlockedList
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                Label { text: "Waiting for Memory"; font.bold: true; color: "#fab387" } // Orange
                 
-                delegate: Rectangle {
-                    width: parent.width
-                    height: 30
-                    color: "white"
-                    border.color: "#eee"
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: blockingViewModel.memoryBlockedList
+                    spacing: 5
                     
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 5
-                        Label { text: "PID " + model.modelData.pid; font.bold: true }
-                        Label { text: model.modelData.info; color: "#666" }
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 35
+                        color: "#1e1e2e"
+                        radius: 4
+                        
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            Label { text: "PID " + model.modelData.pid; font.bold: true; color: textColor }
+                            Label { text: model.modelData.info; color: "#a6adc8" }
+                        }
                     }
                 }
             }
         }
 
         // Notifications
-        ColumnLayout {
+        Rectangle {
             Layout.fillHeight: true
             Layout.fillWidth: true
+            color: bgCard
+            radius: 8
+            border.color: borderColor
             
-            Label { text: "Notificaciones de Desbloqueo"; font.bold: true; color: "#388E3C" }
-            
-            ListView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                model: blockingViewModel.notifications
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                Label { text: "Unlock Notifications"; font.bold: true; color: "#a6e3a1" } // Green
                 
-                delegate: Text {
-                    text: modelData
-                    font.pixelSize: 12
-                    padding: 2
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: blockingViewModel.notifications
+                    spacing: 2
+                    
+                    delegate: Text {
+                        text: "> " + modelData
+                        font.pixelSize: 12
+                        font.family: "Consolas"
+                        color: "#a6e3a1"
+                        padding: 2
+                    }
                 }
             }
         }

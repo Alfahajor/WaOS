@@ -9,6 +9,7 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 
 #include "controllers/SimulationController.h"
 #include "viewmodels/BlockingEventsViewModel.h"
@@ -21,6 +22,7 @@
 int main(int argc, char* argv[]) {
   Q_INIT_RESOURCE(resources);
 
+  QQuickStyle::setStyle("Basic");
   QGuiApplication app(argc, argv);
 
   app.setOrganizationName("UNSA");
