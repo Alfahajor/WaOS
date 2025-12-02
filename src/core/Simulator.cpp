@@ -147,6 +147,12 @@ namespace waos::core {
     uint64_t now = m_clock.getTime();
     emit clockTicked(now);
 
+    // IO Devices (Parallel to CPU)
+    handleIO();
+
+    // Memory Disk Operations (Parallel to CPU)
+    handlePageFaults();
+
     // Current running process executes its burst for this tick
     if (m_contextSwitchCounter > 0) {
       // Context Switch Overhead, CPU is busy doing kernel work
@@ -167,12 +173,6 @@ namespace waos::core {
 
     // Process Arrivals (May cause Preemption)
     handleArrivals();
-
-    // IO Devices (Parallel to CPU)
-    handleIO();
-
-    // Memory Disk Operations (Parallel to CPU)
-    handlePageFaults();
 
     // Scheduling logic runs if CPU is free AND no switch is in progress.
     if (m_runningProcess == nullptr && m_contextSwitchCounter == 0) handleScheduling();
