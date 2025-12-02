@@ -92,7 +92,7 @@ Rectangle {
                         anchors.fill: parent
                         onClicked: {
                             // Update Global Selection
-                            mainWindow.selectedFrame = model.modelData
+                            mainWindow.selectedFrameId = model.modelData.frameId
                             mainWindow.selectionMode = "frame"
                         }
                     }

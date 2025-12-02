@@ -23,12 +23,32 @@ ApplicationWindow {
     property color textMuted: "#a6adc8"
     property color borderColor: "#313244"
 
-    // Selected Process for Inspector
-    property var selectedProcess: null
-    // Selected Frame for Inspector
-    property var selectedFrame: null
+    // Selected IDs (Persistent across ticks)
+    property int selectedPid: -1
+    property int selectedFrameId: -1
+    
     // Selection Mode: "process" or "frame"
     property string selectionMode: "process"
+
+    // Helper to find the current object instance for the selected PID
+    function getSelectedProcess() {
+        if (selectedPid === -1) return null;
+        var list = processViewModel.processList;
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].pid === selectedPid) return list[i];
+        }
+        return null;
+    }
+
+    // Helper to find the current object instance for the selected Frame ID
+    function getSelectedFrame() {
+        if (selectedFrameId === -1) return null;
+        var list = memoryViewModel.frameList;
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].frameId === selectedFrameId) return list[i];
+        }
+        return null;
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -285,8 +305,13 @@ ApplicationWindow {
                                     Label { text: mainWindow.selectionMode === "process" ? "PID:" : "Frame:"; color: mainWindow.textMuted }
                                     Label { 
                                         text: {
-                                            if (mainWindow.selectionMode === "process") return mainWindow.selectedProcess ? mainWindow.selectedProcess.pid : "-"
-                                            else return mainWindow.selectedFrame ? "F" + mainWindow.selectedFrame.frameId : "-"
+                                            if (mainWindow.selectionMode === "process") {
+                                                var p = mainWindow.getSelectedProcess();
+                                                return p ? p.pid : "-";
+                                            } else {
+                                                var f = mainWindow.getSelectedFrame();
+                                                return f ? "F" + f.frameId : "-";
+                                            }
                                         }
                                         color: mainWindow.textColor; font.bold: true 
                                     }
@@ -294,8 +319,13 @@ ApplicationWindow {
                                     Label { text: mainWindow.selectionMode === "process" ? "Priority:" : "Owner PID:"; color: mainWindow.textMuted }
                                     Label { 
                                         text: {
-                                            if (mainWindow.selectionMode === "process") return mainWindow.selectedProcess ? mainWindow.selectedProcess.priority : "-"
-                                            else return mainWindow.selectedFrame ? (mainWindow.selectedFrame.pid === -1 ? "Free" : mainWindow.selectedFrame.pid) : "-"
+                                            if (mainWindow.selectionMode === "process") {
+                                                var p = mainWindow.getSelectedProcess();
+                                                return p ? p.priority : "-";
+                                            } else {
+                                                var f = mainWindow.getSelectedFrame();
+                                                return f ? (f.pid === -1 ? "Free" : f.pid) : "-";
+                                            }
                                         }
                                         color: mainWindow.textColor; font.bold: true 
                                     }
@@ -303,8 +333,13 @@ ApplicationWindow {
                                     Label { text: mainWindow.selectionMode === "process" ? "State:" : "Page:"; color: mainWindow.textMuted }
                                     Label { 
                                         text: {
-                                            if (mainWindow.selectionMode === "process") return mainWindow.selectedProcess ? mainWindow.selectedProcess.state : "-"
-                                            else return mainWindow.selectedFrame ? (mainWindow.selectedFrame.pid === -1 ? "-" : "P" + mainWindow.selectedFrame.pid) : "-" // Mock Page
+                                            if (mainWindow.selectionMode === "process") {
+                                                var p = mainWindow.getSelectedProcess();
+                                                return p ? p.state : "-";
+                                            } else {
+                                                var f = mainWindow.getSelectedFrame();
+                                                return f ? (f.pid === -1 ? "-" : "P" + f.pid) : "-"; // Mock Page info if not available
+                                            }
                                         }
                                         color: mainWindow.textColor; font.bold: true 
                                     }
@@ -325,7 +360,7 @@ ApplicationWindow {
                                     clip: true
                                     
                                     // If no process selected, empty model. Else show mock sequence.
-                                    model: mainWindow.selectedProcess ? 6 : 0
+                                    model: mainWindow.getSelectedProcess() ? 6 : 0
                                     
                                     delegate: Rectangle {
                                         width: index % 2 == 0 ? 40 : 20 // CPU longer than IO
@@ -356,7 +391,10 @@ ApplicationWindow {
                                     
                                     Text {
                                         anchors.centerIn: parent
-                                        text: mainWindow.selectedFrame && mainWindow.selectedFrame.pid !== -1 ? "0x" + Math.floor(Math.random()*100000).toString(16) : "Empty"
+                                        text: {
+                                            var f = mainWindow.getSelectedFrame();
+                                            return (f && f.pid !== -1) ? "0x" + (f.frameId * 12345).toString(16).toUpperCase() : "Empty";
+                                        }
                                         color: "#a6adc8"
                                         font.family: "Courier New"
                                     }

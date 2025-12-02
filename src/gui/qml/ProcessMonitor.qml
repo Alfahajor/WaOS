@@ -86,18 +86,21 @@ Rectangle {
                 width: parent.width
                 height: 45
                 color: {
-                    if (mainWindow.selectedProcess && mainWindow.selectedProcess.pid === model.modelData.pid) {
+                    if (mainWindow.selectedPid === model.modelData.pid) {
                         return "#313244" // Highlight selected
                     }
                     return index % 2 == 0 ? bgRowEven : bgRowOdd
                 }
                 radius: 5
-                border.color: (mainWindow.selectedProcess && mainWindow.selectedProcess.pid === model.modelData.pid) ? accentColor : "transparent"
-                border.width: (mainWindow.selectedProcess && mainWindow.selectedProcess.pid === model.modelData.pid) ? 1 : 0
+                border.color: (mainWindow.selectedPid === model.modelData.pid) ? accentColor : "transparent"
+                border.width: (mainWindow.selectedPid === model.modelData.pid) ? 1 : 0
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: mainWindow.selectedProcess = model.modelData
+                    onClicked: {
+                        mainWindow.selectedPid = model.modelData.pid
+                        mainWindow.selectionMode = "process"
+                    }
                 }
 
                 RowLayout {
