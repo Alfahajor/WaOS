@@ -32,208 +32,241 @@ ApplicationWindow {
             anchors.margins: 20
             spacing: 15
             
-            // --- Header Moderno ---
-            Rectangle {
+            // --- Header Section ---
+            ColumnLayout {
                 Layout.fillWidth: true
-                height: 50
-                color: "transparent"
-                
-                RowLayout {
-                    anchors.fill: parent
+                spacing: 10
+
+                // Header Moderno
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 50
+                    color: "transparent"
                     
-                    // Title Only
-                    Text {
-                        text: "WaOS - Simulator"
-                        font.pixelSize: 24
-                        font.bold: true
-                        color: mainWindow.textColor
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-                    
-                    Item { Layout.fillWidth: true } // Spacer
-                    
-                    // Metrics Summary (Placeholder for top right stats)
                     RowLayout {
-                        spacing: 15
+                        anchors.fill: parent
                         
-                        // --- Playback Controls (Moved to Header) ---
-                        RowLayout {
-                            spacing: 10
-                            
-                            // Reset
-                            Button {
-                                icon.source: "qrc:/icons/reset.svg"
-                                icon.color: mainWindow.textMuted
-                                display: AbstractButton.IconOnly
-                                background: Rectangle { color: "transparent" }
-                                onClicked: simulationController.reset()
-                                ToolTip.visible: hovered; ToolTip.text: "Reset"
-                            }
-
-                            // Step
-                            Button {
-                                icon.source: "qrc:/icons/step.svg"
-                                icon.color: enabled ? mainWindow.textColor : mainWindow.textMuted
-                                display: AbstractButton.IconOnly
-                                background: Rectangle { color: "transparent" }
-                                enabled: !simulationController.isRunning
-                                onClicked: simulationController.step()
-                                ToolTip.visible: hovered; ToolTip.text: "Step"
-                            }
-
-                            // Play/Pause
-                            Button {
-                                icon.source: simulationController.isRunning ? "qrc:/icons/pause.svg" : "qrc:/icons/play.svg"
-                                icon.color: mainWindow.accentColor
-                                icon.width: 32; icon.height: 32
-                                display: AbstractButton.IconOnly
-                                background: Rectangle { color: "transparent" }
-                                onClicked: {
-                                    if (simulationController.isRunning) simulationController.stop()
-                                    else simulationController.start()
-                                }
-                            }
-                            
-                            // Speed
-                            Slider {
-                                from: 100; to: 2000
-                                value: simulationController.tickInterval
-                                onMoved: simulationController.tickInterval = value
-                                Layout.preferredWidth: 80
-                                background: Rectangle {
-                                    implicitHeight: 4; width: parent.width; height: implicitHeight
-                                    radius: 2; color: mainWindow.bgCard
-                                    Rectangle { width: parent.parent.visualPosition * parent.width; height: parent.height; color: mainWindow.accentColor; radius: 2 }
-                                }
-                                handle: Rectangle {
-                                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                    implicitWidth: 12; implicitHeight: 12; radius: 6
-                                    color: mainWindow.accentColor
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            width: 1; height: 30; color: mainWindow.borderColor
-                        }
-
-                        Rectangle {
-                            width: 120; height: 50; radius: 8
-                            color: mainWindow.bgSurface
-                            border.color: mainWindow.borderColor
-                            Column {
-                                anchors.centerIn: parent
-                                Text { text: "CPU Util"; color: mainWindow.textMuted; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
-                                Text { text: "0%"; color: mainWindow.successColor; font.bold: true; font.pixelSize: 16; anchors.horizontalCenter: parent.horizontalCenter }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // --- Control Panel (Config) ---
-            ControlPanel {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 80
-            }
-            
-            // --- Main Content Area ---
-            // Styled Tab Bar
-            TabBar {
-                id: tabBar
-                Layout.fillWidth: true
-                background: Rectangle { color: "transparent" }
-                
-                Repeater {
-                    model: ["Dashboard", "Memory Map"]
-                    TabButton {
-                        text: modelData
-                        width: implicitWidth + 40
-                        
-                        contentItem: Text {
-                            text: parent.text
+                        // Title Only
+                        Text {
+                            text: "WaOS - Simulator"
+                            font.pixelSize: 24
                             font.bold: true
-                            color: parent.checked ? mainWindow.accentColor : mainWindow.textMuted
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
+                            color: mainWindow.textColor
+                            Layout.alignment: Qt.AlignVCenter
                         }
                         
-                        background: Rectangle {
-                            color: parent.checked ? "#2089b4fa" : "transparent"
-                            radius: 5
-                            border.width: 0
+                        Item { Layout.fillWidth: true } // Spacer
+                        
+                        // Metrics Summary
+                        RowLayout {
+                            spacing: 15
                             
+                            // --- Playback Controls ---
+                            RowLayout {
+                                spacing: 10
+                                
+                                // Reset
+                                Button {
+                                    icon.source: "qrc:/icons/reset.svg"
+                                    icon.color: mainWindow.textMuted
+                                    display: AbstractButton.IconOnly
+                                    background: Rectangle { color: "transparent" }
+                                    onClicked: simulationController.reset()
+                                    ToolTip.visible: hovered; ToolTip.text: "Reset"
+                                }
+
+                                // Step
+                                Button {
+                                    icon.source: "qrc:/icons/step.svg"
+                                    icon.color: enabled ? mainWindow.textColor : mainWindow.textMuted
+                                    display: AbstractButton.IconOnly
+                                    background: Rectangle { color: "transparent" }
+                                    enabled: !simulationController.isRunning
+                                    onClicked: simulationController.step()
+                                    ToolTip.visible: hovered; ToolTip.text: "Step"
+                                }
+
+                                // Play/Pause
+                                Button {
+                                    icon.source: simulationController.isRunning ? "qrc:/icons/pause.svg" : "qrc:/icons/play.svg"
+                                    icon.color: mainWindow.accentColor
+                                    icon.width: 32; icon.height: 32
+                                    display: AbstractButton.IconOnly
+                                    background: Rectangle { color: "transparent" }
+                                    onClicked: {
+                                        if (simulationController.isRunning) simulationController.stop()
+                                        else simulationController.start()
+                                    }
+                                }
+                                
+                                // Speed
+                                Slider {
+                                    from: 100; to: 2000
+                                    value: simulationController.tickInterval
+                                    onMoved: simulationController.tickInterval = value
+                                    Layout.preferredWidth: 80
+                                    background: Rectangle {
+                                        implicitHeight: 4; width: parent.width; height: implicitHeight
+                                        radius: 2; color: mainWindow.bgCard
+                                        Rectangle { width: parent.parent.visualPosition * parent.width; height: parent.height; color: mainWindow.accentColor; radius: 2 }
+                                    }
+                                    handle: Rectangle {
+                                        x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                                        y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                        implicitWidth: 12; implicitHeight: 12; radius: 6
+                                        color: mainWindow.accentColor
+                                    }
+                                }
+                            }
+
                             Rectangle {
-                                width: parent.width
-                                height: 3
-                                anchors.bottom: parent.bottom
-                                color: mainWindow.accentColor
-                                visible: parent.parent.checked
+                                width: 1; height: 30; color: mainWindow.borderColor
+                            }
+
+                            Rectangle {
+                                width: 120; height: 50; radius: 8
+                                color: mainWindow.bgSurface
+                                border.color: mainWindow.borderColor
+                                Column {
+                                    anchors.centerIn: parent
+                                    Text { text: "CPU Util"; color: mainWindow.textMuted; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
+                                    Text { text: "0%"; color: mainWindow.successColor; font.bold: true; font.pixelSize: 16; anchors.horizontalCenter: parent.horizontalCenter }
+                                }
                             }
                         }
                     }
                 }
+
+                // Control Panel
+                ControlPanel {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 80
+                }
             }
             
-            // Content Stack
-            Rectangle {
+            // --- Main Content (SplitView) ---
+            SplitView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                color: mainWindow.bgSurface
-                radius: 12
-                border.color: mainWindow.borderColor
-                border.width: 1
-                clip: true
+                orientation: Qt.Horizontal
 
-                StackLayout {
-                    anchors.fill: parent
-                    anchors.margins: 1
-                    currentIndex: tabBar.currentIndex
+                handle: Rectangle {
+                    implicitWidth: 4
+                    color: SplitView.pressed ? mainWindow.accentColor : mainWindow.borderColor
+                }
+
+                // Item 1: Left Container
+                Item {
+                    SplitView.preferredWidth: parent.width * 0.7
+                    SplitView.fillHeight: true
                     
-                    // View 1: Dashboard (Processes + Logs)
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        
-                        RowLayout {
-                            anchors.fill: parent
-                            spacing: 0
+                    // Debug Border
+                    Rectangle { anchors.fill: parent; color: "red"; opacity: 0.3; visible: true; z: 100 }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 10
+
+                        // Tab Bar for Process Monitor / Memory Monitor
+                        TabBar {
+                            id: tabBar
+                            Layout.fillWidth: true
+                            background: Rectangle { color: "transparent" }
                             
-                            // Left: Process Monitor
-                            ProcessMonitor {
-                                Layout.fillHeight: true
-                                Layout.fillWidth: true
-                                Layout.preferredWidth: 2 // 2/3 width
-                            }
-                            
-                            // Divider
-                            Rectangle { Layout.fillHeight: true; width: 1; color: mainWindow.borderColor }
-                            
-                            // Right: Logs
-                            ExecutionLog {
-                                Layout.fillHeight: true
-                                Layout.fillWidth: true
-                                Layout.preferredWidth: 1 // 1/3 width
+                            Repeater {
+                                model: ["Dashboard", "Memory Map"]
+                                TabButton {
+                                    text: modelData
+                                    width: implicitWidth + 40
+                                    
+                                    contentItem: Text {
+                                        text: parent.text
+                                        font.bold: true
+                                        color: parent.checked ? mainWindow.accentColor : mainWindow.textMuted
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    
+                                    background: Rectangle {
+                                        color: parent.checked ? "#2089b4fa" : "transparent"
+                                        radius: 5
+                                        border.width: 0
+                                        
+                                        Rectangle {
+                                            width: parent.width
+                                            height: 3
+                                            anchors.bottom: parent.bottom
+                                            color: mainWindow.accentColor
+                                            visible: parent.parent.checked
+                                        }
+                                    }
+                                }
                             }
                         }
+
+                        // Main View (Process Monitor / Memory Monitor)
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            color: mainWindow.bgSurface
+                            radius: 12
+                            border.color: mainWindow.borderColor
+                            border.width: 1
+                            clip: true
+
+                            StackLayout {
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                currentIndex: tabBar.currentIndex
+                                
+                                // View 1: Process Monitor
+                                ProcessMonitor {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                }
+                                
+                                // View 2: Memory Monitor
+                                MemoryMonitor {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                }
+                            }
+                        }
+
+                        // Blocked Processes (Bottom Left)
+                        BlockedProcesses {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 180
+                        }
                     }
-                    
-                    // View 2: Memory Monitor
-                    MemoryMonitor {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
+                }
+
+                // Item 2: Right Container
+                Item {
+                    SplitView.preferredWidth: parent.width * 0.3
+                    SplitView.fillHeight: true
+
+                    // Debug Border
+                    Rectangle { anchors.fill: parent; color: "red"; opacity: 0.3; visible: true; z: 100 }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 10
+
+                        // Execution Log
+                        ExecutionLog {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                        }
+
+                        // Unlock Notifications
+                        UnlockNotifications {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 200
+                        }
                     }
                 }
             }
-            
-            // --- Blocking Panel (Bottom) ---
-            BlockingPanel {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 180
-            }
         }
-
-        // --- Floating Control Bar (REMOVED - Moved to Header) ---
     }
 }
