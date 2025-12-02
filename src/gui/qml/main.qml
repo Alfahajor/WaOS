@@ -222,25 +222,25 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         
-                        ColumnLayout {
+                        RowLayout {
                             anchors.fill: parent
                             spacing: 0
                             
-                            // Top: Process Monitor
+                            // Left: Process Monitor
                             ProcessMonitor {
-                                Layout.fillWidth: true
                                 Layout.fillHeight: true
-                                Layout.preferredHeight: 2 // 2/3 height
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 2 // 2/3 width
                             }
                             
                             // Divider
-                            Rectangle { Layout.fillWidth: true; height: 1; color: mainWindow.borderColor }
+                            Rectangle { Layout.fillHeight: true; width: 1; color: mainWindow.borderColor }
                             
-                            // Bottom: Logs
+                            // Right: Logs
                             ExecutionLog {
-                                Layout.fillWidth: true
                                 Layout.fillHeight: true
-                                Layout.preferredHeight: 1 // 1/3 height
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1 // 1/3 width
                             }
                         }
                     }
