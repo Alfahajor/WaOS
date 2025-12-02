@@ -20,3 +20,10 @@ add_test(NAME SimulatorIntegration COMMAND test_simulator_integration)
 add_executable(test_simulator_advanced test_SimulatorAdvanced.cpp)
 target_link_libraries(test_simulator_advanced PRIVATE core Qt6::Core)
 add_test(NAME SimulatorAdvanced COMMAND test_simulator_advanced)
+
+# Test trace generator
+add_executable(test_trace_generator test_TraceGenerator.cpp)
+target_link_libraries(test_trace_generator PRIVATE core Qt6::Core)
+add_test(NAME TraceGenerator COMMAND test_trace_generator)
+
+
