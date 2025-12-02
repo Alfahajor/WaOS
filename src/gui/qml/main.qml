@@ -65,6 +65,16 @@ ApplicationWindow {
                             RowLayout {
                                 spacing: 10
                                 
+                                // Settings Button
+                                Button {
+                                    text: "⚙️"
+                                    font.pixelSize: 20
+                                    display: AbstractButton.TextOnly
+                                    background: Rectangle { color: "transparent" }
+                                    onClicked: settingsDialog.open()
+                                    ToolTip.visible: hovered; ToolTip.text: "Settings"
+                                }
+
                                 // Reset
                                 Button {
                                     icon.source: "qrc:/icons/reset.svg"
@@ -137,11 +147,7 @@ ApplicationWindow {
                     }
                 }
 
-                // Control Panel
-                ControlPanel {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 80
-                }
+
             }
             
             // --- Main Content (SplitView) ---
@@ -156,13 +162,11 @@ ApplicationWindow {
                 }
 
                 // Item 1: Left Container
-                Item {
+                Rectangle {
+                    color: "transparent"
                     SplitView.preferredWidth: parent.width * 0.7
                     SplitView.fillHeight: true
                     
-                    // Debug Border
-                    Rectangle { anchors.fill: parent; color: "red"; opacity: 0.3; visible: true; z: 100 }
-
                     ColumnLayout {
                         anchors.fill: parent
                         spacing: 10
@@ -242,12 +246,10 @@ ApplicationWindow {
                 }
 
                 // Item 2: Right Container
-                Item {
+                Rectangle {
+                    color: "transparent"
                     SplitView.preferredWidth: parent.width * 0.3
                     SplitView.fillHeight: true
-
-                    // Debug Border
-                    Rectangle { anchors.fill: parent; color: "red"; opacity: 0.3; visible: true; z: 100 }
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -267,6 +269,12 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+
+        // Settings Dialog Instance
+        SettingsDialog {
+            id: settingsDialog
+            anchors.centerIn: parent
         }
     }
 }
