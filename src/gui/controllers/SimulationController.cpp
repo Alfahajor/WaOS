@@ -5,6 +5,7 @@
 #include <QFileInfo>
 
 #include "../viewmodels/BlockingEventsViewModel.h"
+#include "../viewmodels/GanttViewModel.h"
 #include "waos/memory/FIFOMemoryManager.h"
 #include "waos/memory/LRUMemoryManager.h"
 #include "waos/memory/OptimalMemoryManager.h"
@@ -179,6 +180,13 @@ void SimulationController::registerBlockingEventsViewModel(waos::gui::viewmodels
   if (vm) {
     vm->setSimulator(m_simulator.get());
     connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::BlockingEventsViewModel::reset);
+  }
+}
+
+void SimulationController::registerGanttViewModel(waos::gui::viewmodels::GanttViewModel* vm) {
+  if (vm) {
+    vm->setSimulator(m_simulator.get());
+    connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::GanttViewModel::reset);
   }
 }
 

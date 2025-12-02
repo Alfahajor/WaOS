@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QAbstractListModel>
 #include <vector>
-#include "../mock/MockSimulator.h"
+#include "waos/core/Simulator.h"
 
 namespace waos::gui::viewmodels {
 
@@ -28,7 +28,7 @@ public:
 
     explicit GanttViewModel(QObject* parent = nullptr);
 
-    void setSimulator(waos::gui::mock::MockSimulator* simulator);
+    void setSimulator(waos::core::Simulator* simulator);
     int totalTicks() const { return m_totalTicks; }
 
     // QAbstractListModel interface
@@ -44,7 +44,7 @@ signals:
     void totalTicksChanged();
 
 private:
-    waos::gui::mock::MockSimulator* m_simulator = nullptr;
+    waos::core::Simulator* m_simulator = nullptr;
     std::vector<GanttBlock> m_blocks;
     int m_totalTicks = 0;
     

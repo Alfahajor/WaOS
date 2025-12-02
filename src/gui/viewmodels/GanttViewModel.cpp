@@ -5,10 +5,10 @@ namespace waos::gui::viewmodels {
 
 GanttViewModel::GanttViewModel(QObject* parent) : QAbstractListModel(parent) {}
 
-void GanttViewModel::setSimulator(waos::gui::mock::MockSimulator* simulator) {
+void GanttViewModel::setSimulator(waos::core::Simulator* simulator) {
     m_simulator = simulator;
     if (m_simulator) {
-        connect(m_simulator, &waos::gui::mock::MockSimulator::clockTicked, 
+        connect(m_simulator, &waos::core::Simulator::clockTicked, 
                 this, &GanttViewModel::onClockTicked);
     }
 }

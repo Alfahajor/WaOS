@@ -6,6 +6,7 @@
         <file>BlockingPanel.qml</file>
         <file>ControlPanel.qml</file>
         <file>ExecutionLog.qml</file>
+        <file>GanttChart.qml</file>
         <file>SettingsDialog.qml</file>
         <file>BlockedProcesses.qml</file>
         <file>UnlockNotifications.qml</file>

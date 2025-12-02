@@ -272,6 +272,12 @@ ApplicationWindow {
                             }
                         }
 
+                        // Gantt Chart (Timeline)
+                        GanttChart {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 100
+                        }
+
                         // Blocked Processes (Bottom Left)
                         BlockedProcesses {
                             Layout.fillWidth: true
