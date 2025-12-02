@@ -128,21 +128,6 @@ ApplicationWindow {
                                     }
                                 }
                             }
-
-                            Rectangle {
-                                width: 1; height: 30; color: mainWindow.borderColor
-                            }
-
-                            Rectangle {
-                                width: 120; height: 50; radius: 8
-                                color: mainWindow.bgSurface
-                                border.color: mainWindow.borderColor
-                                Column {
-                                    anchors.centerIn: parent
-                                    Text { text: "CPU Util"; color: mainWindow.textMuted; font.pixelSize: 10; anchors.horizontalCenter: parent.horizontalCenter }
-                                    Text { text: "0%"; color: mainWindow.successColor; font.bold: true; font.pixelSize: 16; anchors.horizontalCenter: parent.horizontalCenter }
-                                }
-                            }
                         }
                     }
                 }
@@ -255,16 +240,77 @@ ApplicationWindow {
                         anchors.fill: parent
                         spacing: 10
 
-                        // Execution Log
+                        // 1. Inspector Section
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 200
+                            color: mainWindow.bgCard
+                            radius: 8
+                            border.color: mainWindow.borderColor
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 15
+                                spacing: 10
+                                
+                                Label { text: "INSPECTOR"; font.bold: true; color: mainWindow.textMuted }
+                                
+                                GridLayout {
+                                    columns: 2
+                                    rowSpacing: 10
+                                    columnSpacing: 20
+                                    
+                                    Label { text: "PID:"; color: mainWindow.textMuted }
+                                    Label { text: "-"; color: mainWindow.textColor; font.bold: true }
+                                    
+                                    Label { text: "Priority:"; color: mainWindow.textMuted }
+                                    Label { text: "-"; color: mainWindow.textColor; font.bold: true }
+                                    
+                                    Label { text: "State:"; color: mainWindow.textMuted }
+                                    Label { text: "-"; color: mainWindow.textColor; font.bold: true }
+                                }
+                                
+                                Item { Layout.fillHeight: true } // Spacer
+                            }
+                        }
+
+                        // 2. System Health Section
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 120
+                            color: mainWindow.bgCard
+                            radius: 8
+                            border.color: mainWindow.borderColor
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 15
+                                spacing: 10
+                                
+                                Label { text: "SYSTEM HEALTH"; font.bold: true; color: mainWindow.textMuted }
+                                
+                                RowLayout {
+                                    spacing: 40
+                                    
+                                    // CPU Util
+                                    Column {
+                                        Text { text: "CPU Util"; color: mainWindow.textMuted; font.pixelSize: 12 }
+                                        Text { text: "0%"; color: mainWindow.successColor; font.bold: true; font.pixelSize: 24 }
+                                    }
+                                    
+                                    // Hit Ratio
+                                    Column {
+                                        Text { text: "Hit Ratio"; color: mainWindow.textMuted; font.pixelSize: 12 }
+                                        Text { text: "-"; color: mainWindow.accentColor; font.bold: true; font.pixelSize: 24 }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Execution Log (Fills remaining space)
                         ExecutionLog {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                        }
-
-                        // Unlock Notifications
-                        UnlockNotifications {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 200
                         }
                     }
                 }
