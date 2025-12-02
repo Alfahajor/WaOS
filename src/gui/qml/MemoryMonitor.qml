@@ -29,29 +29,6 @@ Rectangle {
             Item { Layout.fillWidth: true }
         }
 
-        // Metrics
-        RowLayout {
-            spacing: 15
-            Repeater {
-                model: [
-                    { label: "Page Faults", value: memoryViewModel.totalPageFaults },
-                    { label: "Replacements", value: memoryViewModel.totalReplacements },
-                    { label: "Hit Ratio", value: memoryViewModel.hitRatio.toFixed(1) + "%" }
-                ]
-                Rectangle {
-                    width: 140; height: 60
-                    color: bgCard
-                    radius: 8
-                    border.color: borderColor
-                    Column {
-                        anchors.centerIn: parent
-                        Text { text: modelData.label; color: "#a6adc8"; font.pixelSize: 11 }
-                        Text { text: modelData.value; color: accentColor; font.bold: true; font.pixelSize: 16 }
-                    }
-                }
-            }
-        }
-
         // Memory Grid
         Rectangle {
             Layout.fillWidth: true

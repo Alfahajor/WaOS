@@ -221,7 +221,6 @@ ApplicationWindow {
                 Rectangle {
                     color: "transparent"
                     SplitView.preferredWidth: parent.width * 0.7
-                    SplitView.fillHeight: true
                     
                     ColumnLayout {
                         anchors.fill: parent
@@ -275,7 +274,6 @@ ApplicationWindow {
                 Rectangle {
                     color: "transparent"
                     SplitView.preferredWidth: parent.width * 0.3
-                    SplitView.fillHeight: true
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -407,7 +405,7 @@ ApplicationWindow {
                         // 2. System Health Section
                         Rectangle {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 160 // Increased height for Gauges
+                            Layout.preferredHeight: 220 // Increased height for Gauges + Stats
                             color: mainWindow.bgCard
                             radius: 8
                             border.color: mainWindow.borderColor
@@ -531,6 +529,49 @@ ApplicationWindow {
                                                 font.pixelSize: 10
                                                 anchors.horizontalCenter: parent.horizontalCenter
                                             }
+                                        }
+                                    }
+                                }
+
+                                // Memory Stats Text
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 5
+                                    spacing: 20
+                                    
+                                    Column {
+                                        Layout.fillWidth: true
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Text { 
+                                            text: "Page Faults"
+                                            color: mainWindow.textMuted
+                                            font.pixelSize: 11
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                        Text { 
+                                            text: memoryViewModel.totalPageFaults
+                                            color: mainWindow.errorColor // Red/Pink
+                                            font.bold: true
+                                            font.pixelSize: 16
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                    }
+                                    
+                                    Column {
+                                        Layout.fillWidth: true
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Text { 
+                                            text: "Replacements"
+                                            color: mainWindow.textMuted
+                                            font.pixelSize: 11
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                        Text { 
+                                            text: memoryViewModel.totalReplacements
+                                            color: mainWindow.accentSecondary // Purple
+                                            font.bold: true
+                                            font.pixelSize: 16
+                                            anchors.horizontalCenter: parent.horizontalCenter
                                         }
                                     }
                                 }
