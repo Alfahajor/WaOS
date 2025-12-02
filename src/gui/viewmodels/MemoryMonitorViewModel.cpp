@@ -4,10 +4,10 @@ namespace waos::gui::viewmodels {
 
 MemoryMonitorViewModel::MemoryMonitorViewModel(QObject* parent) : QObject(parent) {}
 
-void MemoryMonitorViewModel::setSimulator(waos::gui::mock::MockSimulator* simulator) {
+void MemoryMonitorViewModel::setSimulator(waos::core::Simulator* simulator) {
   m_simulator = simulator;
   if (m_simulator) {
-    connect(m_simulator, &waos::gui::mock::MockSimulator::clockTicked,
+    connect(m_simulator, &waos::core::Simulator::clockTicked,
             this, &MemoryMonitorViewModel::onClockTicked);
   }
 }
@@ -42,10 +42,8 @@ void MemoryMonitorViewModel::onClockTicked(uint64_t tick) {
     }
   }
 
-  auto* memoryManager = m_simulator->getMemoryManager();
-  if (!memoryManager) return;
-
-  auto frames = memoryManager->getFrameStatus();
+  // Use Simulator wrappers to ensure correct lock order (Sim -> Mem)
+  auto frames = m_simulator->getFrameStatus();
 
   qDeleteAll(m_frameItems);
   m_frameItems.clear();
@@ -72,7 +70,7 @@ void MemoryMonitorViewModel::onClockTicked(uint64_t tick) {
 
   emit frameListChanged();
 
-  auto stats = memoryManager->getMemoryStats();
+  auto stats = m_simulator->getMemoryStats();
   if (m_totalPageFaults != stats.totalPageFaults) {
     m_totalPageFaults = stats.totalPageFaults;
     emit totalPageFaultsChanged();
@@ -97,7 +95,7 @@ void MemoryMonitorViewModel::updatePageTable() {
     return;
   }
 
-  auto pageTable = m_simulator->getPageTable(m_selectedPid);
+  auto pageTable = m_simulator->getPageTableForProcess(m_selectedPid);
 
   qDeleteAll(m_pageTableItems);
   m_pageTableItems.clear();

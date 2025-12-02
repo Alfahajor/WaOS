@@ -4,17 +4,18 @@
 #include <QTimer>
 #include <memory>
 
-#include "../mock/MockSimulator.h"
 #include "../viewmodels/BlockingEventsViewModel.h"
 #include "../viewmodels/ExecutionLogViewModel.h"
 #include "../viewmodels/MemoryMonitorViewModel.h"
 #include "../viewmodels/ProcessMonitorViewModel.h"
+#include "waos/core/Simulator.h"
 
 namespace waos::gui::controllers {
 
 class SimulationController : public QObject {
   Q_OBJECT
   Q_PROPERTY(bool isRunning READ isRunning NOTIFY isRunningChanged)
+  Q_PROPERTY(int tickInterval READ tickInterval WRITE setTickInterval NOTIFY tickIntervalChanged)
   Q_PROPERTY(QString schedulerAlgorithm READ schedulerAlgorithm NOTIFY schedulerAlgorithmChanged)
   Q_PROPERTY(QString memoryAlgorithm READ memoryAlgorithm NOTIFY memoryAlgorithmChanged)
 
@@ -49,7 +50,7 @@ class SimulationController : public QObject {
   void onTimeout();
 
  private:
-  std::unique_ptr<waos::gui::mock::MockSimulator> m_simulator;
+  std::unique_ptr<waos::core::Simulator> m_simulator;
   QTimer* m_timer;
   int m_tickInterval = 1000;
 };

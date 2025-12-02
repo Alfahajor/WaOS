@@ -4,10 +4,10 @@ namespace waos::gui::viewmodels {
 
 BlockingEventsViewModel::BlockingEventsViewModel(QObject* parent) : QObject(parent) {}
 
-void BlockingEventsViewModel::setSimulator(waos::gui::mock::MockSimulator* simulator) {
+void BlockingEventsViewModel::setSimulator(waos::core::Simulator* simulator) {
   m_simulator = simulator;
   if (m_simulator) {
-    connect(m_simulator, &waos::gui::mock::MockSimulator::clockTicked,
+    connect(m_simulator, &waos::core::Simulator::clockTicked,
             this, &BlockingEventsViewModel::onClockTicked);
   }
 }
@@ -49,11 +49,11 @@ void BlockingEventsViewModel::onClockTicked(uint64_t tick) {
   m_memoryBlockedItems.clear();
 
   for (const auto& info : memoryBlocked) {
-    currentMemPids.insert(info.process->getPid());
+    currentMemPids.insert(info.pid);
     QString details = QString("Page Fault: Page %1 (Remaining: %2 ticks)")
                           .arg(info.pageNumber)
                           .arg(info.ticksRemaining);
-    m_memoryBlockedItems.append(new BlockedItemModel(info.process->getPid(), "Memoria", details, this));
+    m_memoryBlockedItems.append(new BlockedItemModel(info.pid, "Memoria", details, this));
   }
   emit memoryBlockedListChanged();
 

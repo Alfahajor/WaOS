@@ -2,9 +2,9 @@
 #include <QList>
 #include <QObject>
 
-#include "../mock/MockSimulator.h"
 #include "../models/FrameItemModel.h"
 #include "../models/PageTableItemModel.h"
+#include "waos/core/Simulator.h"
 
 namespace waos::gui::viewmodels {
 
@@ -23,7 +23,7 @@ class MemoryMonitorViewModel : public QObject {
  public:
   explicit MemoryMonitorViewModel(QObject* parent = nullptr);
 
-  void setSimulator(waos::gui::mock::MockSimulator* simulator);
+  void setSimulator(waos::core::Simulator* simulator);
   QList<QObject*> frameList() const { return m_frameItems; }
 
   int totalPageFaults() const { return m_totalPageFaults; }
@@ -51,7 +51,7 @@ class MemoryMonitorViewModel : public QObject {
  private:
   void updatePageTable();
 
-  waos::gui::mock::MockSimulator* m_simulator = nullptr;
+  waos::core::Simulator* m_simulator = nullptr;
   QList<QObject*> m_frameItems;
 
   int m_totalPageFaults = 0;

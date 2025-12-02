@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <queue>
 #include <cstdint>
+#include <mutex> 
 
 namespace waos::memory {
 
@@ -36,15 +37,17 @@ namespace waos::memory {
     void freeForProcess(int processId) override;
     void completePageLoad(int processId, int pageNumber) override;
 
-    // Statistics getters
-    uint64_t getPageFaults() const { return m_pageFaults; }
-    uint64_t getPageReplacements() const { return m_pageReplacements; }
-    int getFreeFrames() const;
-    int getActivePages(int processId) const;
+    // Métodos de Observación para GUI
+    std::vector<waos::common::FrameInfo> getFrameStatus() const override;
+    std::vector<waos::common::PageTableEntryInfo> getPageTableForProcess(int processId) const override;
+    waos::common::MemoryStats getMemoryStats() const override;
+    std::string getAlgorithmName() const override;
 
   private:
+    mutable std::mutex m_mutex;
+
     // Physical memory simulation
-    std::vector<Frame> m_frames;          // Array of physical frames
+    std::vector<Frame> m_frames;
     const uint64_t* m_clockRef;            // Pointer to simulation clock
     
     // Per-process page tables
@@ -54,8 +57,7 @@ namespace waos::memory {
     std::queue<std::pair<int, int>> m_loadQueue;         // <processId, pageNumber>
     
     // Statistics
-    uint64_t m_pageFaults;
-    uint64_t m_pageReplacements;
+    waos::common::MemoryStats m_stats;
 
     /**
      * @brief Finds a free frame in physical memory.

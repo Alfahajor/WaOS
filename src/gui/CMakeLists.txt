@@ -62,6 +62,7 @@ target_include_directories(waos_gui PUBLIC
 target_link_libraries(waos_gui PUBLIC
     core
     scheduler
+    memory
     Qt6::Core
     Qt6::Quick
     Qt6::Qml

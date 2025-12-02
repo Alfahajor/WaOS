@@ -6,7 +6,7 @@
 #include <set>
 #include <vector>
 
-#include "../mock/MockSimulator.h"
+#include "waos/core/Simulator.h"
 
 namespace waos::gui::viewmodels {
 
@@ -25,7 +25,7 @@ class BlockingEventsViewModel : public QObject {
  public:
   explicit BlockingEventsViewModel(QObject* parent = nullptr);
 
-  void setSimulator(waos::gui::mock::MockSimulator* simulator);
+  void setSimulator(waos::core::Simulator* simulator);
 
   QList<QObject*> ioBlockedList() const { return m_ioBlockedItems; }
   QList<QObject*> memoryBlockedList() const { return m_memoryBlockedItems; }
@@ -41,7 +41,7 @@ class BlockingEventsViewModel : public QObject {
   void notificationsChanged();
 
  private:
-  waos::gui::mock::MockSimulator* m_simulator = nullptr;
+  waos::core::Simulator* m_simulator = nullptr;
 
   QList<QObject*> m_ioBlockedItems;
   QList<QObject*> m_memoryBlockedItems;
