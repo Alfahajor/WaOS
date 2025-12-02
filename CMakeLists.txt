@@ -11,7 +11,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Quick Qml)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Quick Qml QuickControls2)
 
 # Agregamos el subdirectorio que contiene la lógica del núcleo.
 # Este subdirectorio tendrá su propio CMakeLists.txt.
@@ -34,6 +34,7 @@ target_link_libraries(waos_simulator PRIVATE
   Qt6::Core
   Qt6::Quick
   Qt6::Qml
+  Qt6::QuickControls2
 )
 
 # Enable CTest

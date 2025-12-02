@@ -81,6 +81,69 @@ ApplicationWindow {
                     // Metrics Summary (Placeholder for top right stats)
                     RowLayout {
                         spacing: 15
+                        
+                        // --- Playback Controls (Moved to Header) ---
+                        RowLayout {
+                            spacing: 10
+                            
+                            // Reset
+                            Button {
+                                icon.source: "qrc:/icons/reset.svg"
+                                icon.color: mainWindow.textMuted
+                                display: AbstractButton.IconOnly
+                                background: Rectangle { color: "transparent" }
+                                onClicked: simulationController.reset()
+                                ToolTip.visible: hovered; ToolTip.text: "Reset"
+                            }
+
+                            // Step
+                            Button {
+                                icon.source: "qrc:/icons/step.svg"
+                                icon.color: enabled ? mainWindow.textColor : mainWindow.textMuted
+                                display: AbstractButton.IconOnly
+                                background: Rectangle { color: "transparent" }
+                                enabled: !simulationController.isRunning
+                                onClicked: simulationController.step()
+                                ToolTip.visible: hovered; ToolTip.text: "Step"
+                            }
+
+                            // Play/Pause
+                            Button {
+                                icon.source: simulationController.isRunning ? "qrc:/icons/pause.svg" : "qrc:/icons/play.svg"
+                                icon.color: mainWindow.accentColor
+                                icon.width: 32; icon.height: 32
+                                display: AbstractButton.IconOnly
+                                background: Rectangle { color: "transparent" }
+                                onClicked: {
+                                    if (simulationController.isRunning) simulationController.stop()
+                                    else simulationController.start()
+                                }
+                            }
+                            
+                            // Speed
+                            Slider {
+                                from: 100; to: 2000
+                                value: simulationController.tickInterval
+                                onMoved: simulationController.tickInterval = value
+                                Layout.preferredWidth: 80
+                                background: Rectangle {
+                                    implicitHeight: 4; width: parent.width; height: implicitHeight
+                                    radius: 2; color: mainWindow.bgCard
+                                    Rectangle { width: parent.parent.visualPosition * parent.width; height: parent.height; color: mainWindow.accentColor; radius: 2 }
+                                }
+                                handle: Rectangle {
+                                    x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
+                                    y: parent.topPadding + parent.availableHeight / 2 - height / 2
+                                    implicitWidth: 12; implicitHeight: 12; radius: 6
+                                    color: mainWindow.accentColor
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            width: 1; height: 30; color: mainWindow.borderColor
+                        }
+
                         Rectangle {
                             width: 120; height: 50; radius: 8
                             color: mainWindow.bgSurface
@@ -109,7 +172,7 @@ ApplicationWindow {
                 background: Rectangle { color: "transparent" }
                 
                 Repeater {
-                    model: ["Dashboard", "Memory Map", "System Logs"]
+                    model: ["Dashboard", "Memory Map"]
                     TabButton {
                         text: modelData
                         width: implicitWidth + 40
@@ -154,20 +217,36 @@ ApplicationWindow {
                     anchors.margins: 1
                     currentIndex: tabBar.currentIndex
                     
-                    // View 1: Process Monitor (Dashboard)
-                    ProcessMonitor {
+                    // View 1: Dashboard (Processes + Logs)
+                    Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+                        
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: 0
+                            
+                            // Top: Process Monitor
+                            ProcessMonitor {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                Layout.preferredHeight: 2 // 2/3 height
+                            }
+                            
+                            // Divider
+                            Rectangle { Layout.fillWidth: true; height: 1; color: mainWindow.borderColor }
+                            
+                            // Bottom: Logs
+                            ExecutionLog {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                Layout.preferredHeight: 1 // 1/3 height
+                            }
+                        }
                     }
                     
                     // View 2: Memory Monitor
                     MemoryMonitor {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                    }
-                    
-                    // View 3: Logs
-                    ExecutionLog {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                     }
@@ -181,156 +260,6 @@ ApplicationWindow {
             }
         }
 
-        // --- Floating Control Bar ---
-        Rectangle {
-            id: floatingControls
-            width: 500
-            height: 80
-            radius: 40
-            color: mainWindow.bgSurface
-            border.color: mainWindow.borderColor
-            border.width: 1
-            
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
-            anchors.horizontalCenter: parent.horizontalCenter
-            
-            // Shadow (simulated)
-            Rectangle {
-                anchors.fill: parent
-                anchors.topMargin: 4
-                anchors.leftMargin: 4
-                z: -1
-                radius: 40
-                color: "#40000000"
-            }
-
-            RowLayout {
-                anchors.centerIn: parent
-                spacing: 25
-
-                // Reset
-                RoundButton {
-                    Layout.preferredWidth: 45
-                    Layout.preferredHeight: 45
-                    onClicked: simulationController.reset()
-                    
-                    background: Rectangle {
-                        radius: 22.5
-                        color: parent.down ? mainWindow.bgCard : "transparent"
-                        border.color: mainWindow.borderColor
-                        border.width: 1
-                    }
-                    
-                    contentItem: Image {
-                        source: "qrc:/icons/reset.svg"
-                        anchors.centerIn: parent
-                        width: 20; height: 20
-                        fillMode: Image.PreserveAspectFit
-                        // Fallback if icon missing (user will add later)
-                        sourceSize.width: 20
-                        sourceSize.height: 20
-                    }
-                }
-
-                // Step
-                RoundButton {
-                    Layout.preferredWidth: 45
-                    Layout.preferredHeight: 45
-                    enabled: !simulationController.isRunning
-                    onClicked: simulationController.step()
-                    
-                    background: Rectangle {
-                        radius: 22.5
-                        color: parent.down ? mainWindow.bgCard : "transparent"
-                        border.color: mainWindow.borderColor
-                        border.width: 1
-                        opacity: parent.enabled ? 1.0 : 0.5
-                    }
-                    
-                    contentItem: Image {
-                        source: "qrc:/icons/step.svg"
-                        anchors.centerIn: parent
-                        width: 20; height: 20
-                        fillMode: Image.PreserveAspectFit
-                    }
-                }
-
-                // Play/Pause (Hero Button)
-                RoundButton {
-                    Layout.preferredWidth: 65
-                    Layout.preferredHeight: 65
-                    highlighted: true
-                    onClicked: {
-                        if (simulationController.isRunning) simulationController.stop()
-                        else simulationController.start()
-                    }
-                    
-                    background: Rectangle {
-                        radius: 32.5
-                        color: mainWindow.accentColor
-                        
-                        // Glow effect
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: 32.5
-                            color: mainWindow.accentColor
-                            opacity: 0.3
-                            scale: 1.1
-                            z: -1
-                        }
-                    }
-                    
-                    contentItem: Image {
-                        source: simulationController.isRunning ? "qrc:/icons/pause.svg" : "qrc:/icons/play.svg"
-                        anchors.centerIn: parent
-                        width: 28; height: 28
-                        fillMode: Image.PreserveAspectFit
-                    }
-                }
-
-                // Speed Control
-                RowLayout {
-                    spacing: 10
-                    Text { text: "Speed"; color: mainWindow.textMuted; font.pixelSize: 12 }
-                    Slider {
-                        from: 100
-                        to: 2000
-                        value: simulationController.tickInterval
-                        onMoved: simulationController.tickInterval = value
-                        Layout.preferredWidth: 100
-                        
-                        background: Rectangle {
-                            x: parent.leftPadding
-                            y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                            implicitWidth: 200
-                            implicitHeight: 4
-                            width: parent.availableWidth
-                            height: implicitHeight
-                            radius: 2
-                            color: mainWindow.bgCard
-                            
-                            Rectangle {
-                                width: parent.parent.visualPosition * parent.width
-                                height: parent.height
-                                color: mainWindow.accentColor
-                                radius: 2
-                            }
-                        }
-                        
-                        handle: Rectangle {
-                            x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                            y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                            implicitWidth: 16
-                            implicitHeight: 16
-                            radius: 8
-                            color: mainWindow.accentColor
-                            border.color: mainWindow.bgDark
-                            border.width: 2
-                        }
-                    }
-                }
-            }
-        }
+        // --- Floating Control Bar (REMOVED - Moved to Header) ---
     }
 }

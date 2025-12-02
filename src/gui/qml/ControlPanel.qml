@@ -55,6 +55,29 @@ Rectangle {
                         highlighted: schedulerCombo.highlightedIndex === index
                     }
 
+                    indicator: Canvas {
+                        x: schedulerCombo.width - width - schedulerCombo.rightPadding
+                        y: schedulerCombo.topPadding + (schedulerCombo.availableHeight - height) / 2
+                        width: 12
+                        height: 8
+                        contextType: "2d"
+
+                        Connections {
+                            target: schedulerCombo
+                            function onPressedChanged() { schedulerCombo.indicator.requestPaint(); }
+                        }
+
+                        onPaint: {
+                            context.reset();
+                            context.moveTo(0, 0);
+                            context.lineTo(width, 0);
+                            context.lineTo(width / 2, height);
+                            context.closePath();
+                            context.fillStyle = schedulerCombo.pressed ? controlPanel.accentColor : controlPanel.textColor;
+                            context.fill();
+                        }
+                    }
+
                     contentItem: Text {
                         leftPadding: 10
                         rightPadding: schedulerCombo.indicator.width + spacing
@@ -136,6 +159,29 @@ Rectangle {
                         }
                     }
 
+                    indicator: Canvas {
+                        x: memoryCombo.width - width - memoryCombo.rightPadding
+                        y: memoryCombo.topPadding + (memoryCombo.availableHeight - height) / 2
+                        width: 12
+                        height: 8
+                        contextType: "2d"
+
+                        Connections {
+                            target: memoryCombo
+                            function onPressedChanged() { memoryCombo.indicator.requestPaint(); }
+                        }
+
+                        onPaint: {
+                            context.reset();
+                            context.moveTo(0, 0);
+                            context.lineTo(width, 0);
+                            context.lineTo(width / 2, height);
+                            context.closePath();
+                            context.fillStyle = memoryCombo.pressed ? controlPanel.accentColor : controlPanel.textColor;
+                            context.fill();
+                        }
+                    }
+
                     contentItem: Text {
                         leftPadding: 10
                         text: memoryCombo.displayText
@@ -184,22 +230,9 @@ Rectangle {
 
             Button {
                 text: "Browse"
+                icon.source: "qrc:/icons/folder.svg"
+                icon.color: controlPanel.textColor
                 
-                contentItem: RowLayout {
-                    spacing: 5
-                    Image { 
-                        source: "qrc:/icons/folder.svg"
-                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
-                        fillMode: Image.PreserveAspectFit
-                        visible: true
-                    }
-                    Text { 
-                        text: "Browse"
-                        color: controlPanel.textColor
-                        font.bold: true
-                    }
-                }
-
                 background: Rectangle {
                     implicitWidth: 100
                     implicitHeight: 40
@@ -208,32 +241,51 @@ Rectangle {
                     radius: 6
                 }
                 
+                contentItem: RowLayout {
+                    spacing: 5
+                    Image { 
+                        source: parent.icon.source
+                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        fillMode: Image.PreserveAspectFit
+                        visible: true
+                        // Tint the icon using a colored rectangle mask if needed, 
+                        // but since we can't easily use ColorOverlay without import, 
+                        // we rely on the user providing good SVGs or use a trick.
+                        // Actually, let's just use Text + Icon property if possible, 
+                        // but Button's default contentItem overrides icon display.
+                        // Let's use a simple Text item and rely on the button background.
+                    }
+                    Text { 
+                        text: "Browse"
+                        color: controlPanel.textColor
+                        font.bold: true
+                    }
+                }
+                
                 onClicked: fileDialog.open()
             }
 
             Button {
                 text: "Load & Apply"
+                icon.source: "qrc:/icons/check.svg"
                 
-                contentItem: RowLayout {
-                    spacing: 5
-                    Image { 
-                        source: "qrc:/icons/check.svg"
-                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
-                        fillMode: Image.PreserveAspectFit
-                        visible: true
-                    }
-                    Text { 
-                        text: "Apply Config"
-                        color: "#11111b" // Dark text on accent
-                        font.bold: true
-                    }
-                }
-
                 background: Rectangle {
                     implicitWidth: 140
                     implicitHeight: 40
                     color: parent.down ? Qt.darker(controlPanel.accentColor, 1.2) : controlPanel.accentColor
                     radius: 6
+                }
+
+                contentItem: RowLayout {
+                    spacing: 5
+                    // We remove the Image here to avoid the black square issue if SVG is bad.
+                    // Just use text for now to ensure it looks clean, or use a simple rectangle indicator.
+                    Text { 
+                        text: "✓ Apply Config"
+                        color: "#11111b" // Dark text on accent
+                        font.bold: true
+                        Layout.alignment: Qt.AlignCenter
+                    }
                 }
 
                 onClicked: {
