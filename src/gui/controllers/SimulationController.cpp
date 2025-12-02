@@ -1,5 +1,7 @@
 #include "SimulationController.h"
 
+#include "../viewmodels/BlockingEventsViewModel.h"
+
 namespace waos::gui::controllers {
 
 SimulationController::SimulationController(QObject* parent)
@@ -69,6 +71,13 @@ void SimulationController::registerExecutionLogViewModel(waos::gui::viewmodels::
   if (vm) {
     vm->setSimulator(m_simulator.get());
     connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::ExecutionLogViewModel::reset);
+  }
+}
+
+void SimulationController::registerBlockingEventsViewModel(waos::gui::viewmodels::BlockingEventsViewModel* vm) {
+  if (vm) {
+    vm->setSimulator(m_simulator.get());
+    connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::BlockingEventsViewModel::reset);
   }
 }
 

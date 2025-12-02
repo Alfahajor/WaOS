@@ -53,9 +53,6 @@ ApplicationWindow {
                     text: "Memoria"
                 }
                 TabButton {
-                    text: "Bloqueos"
-                }
-                TabButton {
                     text: "Log de Ejecución"
                 }
             }
@@ -77,17 +74,17 @@ ApplicationWindow {
                     Layout.fillHeight: true
                 }
                 
-                // Panel de Bloqueos
-                BlockingPanel {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                }
-                
                 // Log de Ejecución
                 ExecutionLog {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                 }
+            }
+            
+            // Panel de Bloqueos (Persistente)
+            BlockingPanel {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 200
             }
             
             // Footer

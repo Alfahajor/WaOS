@@ -15,7 +15,7 @@ set(GUI_SOURCES
     controllers/SimulationController.cpp
     viewmodels/ProcessMonitorViewModel.cpp
     viewmodels/MemoryMonitorViewModel.cpp
-    # viewmodels/BlockingEventsViewModel.cpp
+    viewmodels/BlockingEventsViewModel.cpp
     viewmodels/ExecutionLogViewModel.cpp
     models/ProcessItemModel.cpp
     models/FrameItemModel.cpp
@@ -30,7 +30,7 @@ set(GUI_HEADERS
     controllers/SimulationController.h
     viewmodels/ProcessMonitorViewModel.h
     viewmodels/MemoryMonitorViewModel.h
-    # viewmodels/BlockingEventsViewModel.h
+    viewmodels/BlockingEventsViewModel.h
     viewmodels/ExecutionLogViewModel.h
     models/ProcessItemModel.h
     models/FrameItemModel.h
