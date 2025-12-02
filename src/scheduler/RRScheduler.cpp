@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "waos/core/Process.h"
-
+#include <iostream>
 namespace waos::scheduler {
 
 RRScheduler::RRScheduler(int quantum) : m_quantum(quantum) {

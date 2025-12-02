@@ -1,14 +1,15 @@
 /**
  * @file SJFScheduler.h
- * @brief Shortest Job First scheduler (skeleton).
+ * @brief Shortest Job First scheduler using priority queue.
  *
- * This is a skeleton: later we will sort by current CPU burst length.
+ * Implements SJF algorithm using std::priority_queue for O(log n) insertions.
  */
 
 #pragma once
 
 #include "IScheduler.h"
 #include <vector>
+#include <queue>
 #include <mutex>
 #include "waos/common/DataStructures.h"
 
@@ -20,10 +21,11 @@ namespace waos::scheduler {
 
 /**
  * @class SJFScheduler
- * @brief Shortest Job First scheduler skeleton.
+ * @brief Shortest Job First scheduler using priority queue.
  *
- * Currently acts as a compilable stub that stores processes in a vector.
- * Future implementation: select process with shortest next CPU burst.
+ * Uses std::priority_queue with custom comparator to maintain processes
+ * ordered by current CPU burst duration. Provides O(log n) insertion
+ * and O(log n) extraction complexity.
  */
 class SJFScheduler : public IScheduler {
 public:
@@ -39,9 +41,19 @@ public:
     std::vector<const waos::core::Process*> peekReadyQueue() const override;
     std::string getAlgorithmName() const override;
     waos::common::SchedulerMetrics getSchedulerMetrics() const override;
+
 private:
+    /**
+     * @brief Comparator for priority queue (min-heap by burst duration)
+     */
+    struct ProcessComparator {
+        bool operator()(waos::core::Process* a, waos::core::Process* b) const;
+    };
+
     mutable std::mutex m_mutex;
-    std::vector<waos::core::Process*> m_pool; // < unsorted pool
+    std::priority_queue<waos::core::Process*, 
+                        std::vector<waos::core::Process*>,
+                        ProcessComparator> m_priorityQueue;
     waos::common::SchedulerMetrics m_metrics;
 };
 
