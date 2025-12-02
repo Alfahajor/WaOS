@@ -5,45 +5,45 @@
 #include <memory>
 
 #include "../mock/MockSimulator.h"
+#include "../viewmodels/ExecutionLogViewModel.h"
 #include "../viewmodels/MemoryMonitorViewModel.h"
 #include "../viewmodels/ProcessMonitorViewModel.h"
-#include "../viewmodels/ExecutionLogViewModel.h"
 
 namespace waos::gui::controllers {
 
 class SimulationController : public QObject {
   Q_OBJECT
   Q_PROPERTY(bool isRunning READ isRunning NOTIFY isRunningChanged)
-    Q_PROPERTY(QString schedulerAlgorithm READ schedulerAlgorithm NOTIFY schedulerAlgorithmChanged)
-    Q_PROPERTY(QString memoryAlgorithm READ memoryAlgorithm NOTIFY memoryAlgorithmChanged)
+  Q_PROPERTY(QString schedulerAlgorithm READ schedulerAlgorithm NOTIFY schedulerAlgorithmChanged)
+  Q_PROPERTY(QString memoryAlgorithm READ memoryAlgorithm NOTIFY memoryAlgorithmChanged)
 
-public:
-    explicit SimulationController(QObject* parent = nullptr);
+ public:
+  explicit SimulationController(QObject* parent = nullptr);
 
-    Q_INVOKABLE void start();
-    Q_INVOKABLE void stop();
-    Q_INVOKABLE void reset();
-    Q_INVOKABLE void step();
+  Q_INVOKABLE void start();
+  Q_INVOKABLE void stop();
+  Q_INVOKABLE void reset();
+  Q_INVOKABLE void step();
 
-    bool isRunning() const;
-    int tickInterval() const;
-    void setTickInterval(int interval);
-    
-    QString schedulerAlgorithm() const;
-    QString memoryAlgorithm() const;
+  bool isRunning() const;
+  int tickInterval() const;
+  void setTickInterval(int interval);
 
-    void registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm);
-    void registerMemoryViewModel(waos::gui::viewmodels::MemoryMonitorViewModel* vm);
-    void registerExecutionLogViewModel(waos::gui::viewmodels::ExecutionLogViewModel* vm);
+  QString schedulerAlgorithm() const;
+  QString memoryAlgorithm() const;
 
-signals:
-    void isRunningChanged();
-    void tickIntervalChanged();
-    void schedulerAlgorithmChanged();
-    void memoryAlgorithmChanged();
-    void simulationReset();
+  void registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm);
+  void registerMemoryViewModel(waos::gui::viewmodels::MemoryMonitorViewModel* vm);
+  void registerExecutionLogViewModel(waos::gui::viewmodels::ExecutionLogViewModel* vm);
 
-private slots:
+ signals:
+  void isRunningChanged();
+  void tickIntervalChanged();
+  void schedulerAlgorithmChanged();
+  void memoryAlgorithmChanged();
+  void simulationReset();
+
+ private slots:
   void onTimeout();
 
  private:

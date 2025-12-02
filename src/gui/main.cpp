@@ -11,9 +11,9 @@
 #include <QQmlContext>
 
 #include "controllers/SimulationController.h"
-#include "viewmodels/ProcessMonitorViewModel.h"
-#include "viewmodels/MemoryMonitorViewModel.h"
 #include "viewmodels/ExecutionLogViewModel.h"
+#include "viewmodels/MemoryMonitorViewModel.h"
+#include "viewmodels/ProcessMonitorViewModel.h"
 
 // Controllers and ViewModels will be registered here
 

@@ -46,11 +46,11 @@ void SimulationController::setTickInterval(int interval) {
 }
 
 QString SimulationController::schedulerAlgorithm() const {
-    return QString::fromStdString(m_simulator->getSchedulerAlgorithmName());
+  return QString::fromStdString(m_simulator->getSchedulerAlgorithmName());
 }
 
 QString SimulationController::memoryAlgorithm() const {
-    return QString::fromStdString(m_simulator->getMemoryAlgorithmName());
+  return QString::fromStdString(m_simulator->getMemoryAlgorithmName());
 }
 
 void SimulationController::registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm) {
@@ -66,10 +66,10 @@ void SimulationController::registerMemoryViewModel(waos::gui::viewmodels::Memory
 }
 
 void SimulationController::registerExecutionLogViewModel(waos::gui::viewmodels::ExecutionLogViewModel* vm) {
-    if (vm) {
-        vm->setSimulator(m_simulator.get());
-        connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::ExecutionLogViewModel::reset);
-    }
+  if (vm) {
+    vm->setSimulator(m_simulator.get());
+    connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::ExecutionLogViewModel::reset);
+  }
 }
 
 void SimulationController::onTimeout() {
