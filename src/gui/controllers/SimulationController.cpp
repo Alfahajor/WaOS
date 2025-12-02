@@ -22,6 +22,7 @@ void SimulationController::stop() {
 void SimulationController::reset() {
   stop();
   m_simulator->reset();
+  emit simulationReset();
 }
 
 void SimulationController::step() {
@@ -44,6 +45,14 @@ void SimulationController::setTickInterval(int interval) {
   }
 }
 
+QString SimulationController::schedulerAlgorithm() const {
+    return QString::fromStdString(m_simulator->getSchedulerAlgorithmName());
+}
+
+QString SimulationController::memoryAlgorithm() const {
+    return QString::fromStdString(m_simulator->getMemoryAlgorithmName());
+}
+
 void SimulationController::registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm) {
   if (vm) {
     vm->setSimulator(m_simulator.get());
@@ -54,6 +63,13 @@ void SimulationController::registerMemoryViewModel(waos::gui::viewmodels::Memory
   if (vm) {
     vm->setSimulator(m_simulator.get());
   }
+}
+
+void SimulationController::registerGanttViewModel(waos::gui::viewmodels::GanttViewModel* vm) {
+    if (vm) {
+        vm->setSimulator(m_simulator.get());
+        connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::GanttViewModel::reset);
+    }
 }
 
 void SimulationController::onTimeout() {

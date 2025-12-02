@@ -55,6 +55,9 @@ ApplicationWindow {
                 TabButton {
                     text: "Bloqueos"
                 }
+                TabButton {
+                    text: "Gantt / Log"
+                }
             }
             
             StackLayout {
@@ -76,6 +79,12 @@ ApplicationWindow {
                 
                 // Panel de Bloqueos
                 BlockingPanel {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                }
+                
+                // Diagrama de Gantt
+                GanttChart {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                 }

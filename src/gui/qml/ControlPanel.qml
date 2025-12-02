@@ -42,5 +42,10 @@ Rectangle {
         }
         
         Item { Layout.fillWidth: true } // Spacer
+        
+        ColumnLayout {
+            Label { text: "Scheduler: " + simulationController.schedulerAlgorithm; font.bold: true }
+            Label { text: "Memory: " + simulationController.memoryAlgorithm; font.bold: true }
+        }
     }
 }

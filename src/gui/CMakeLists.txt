@@ -16,7 +16,7 @@ set(GUI_SOURCES
     viewmodels/ProcessMonitorViewModel.cpp
     viewmodels/MemoryMonitorViewModel.cpp
     # viewmodels/BlockingEventsViewModel.cpp
-    # viewmodels/GanttViewModel.cpp
+    viewmodels/GanttViewModel.cpp
     models/ProcessItemModel.cpp
     models/FrameItemModel.cpp
     # models/EventItemModel.cpp
@@ -31,7 +31,7 @@ set(GUI_HEADERS
     viewmodels/ProcessMonitorViewModel.h
     viewmodels/MemoryMonitorViewModel.h
     # viewmodels/BlockingEventsViewModel.h
-    # viewmodels/GanttViewModel.h
+    viewmodels/GanttViewModel.h
     models/ProcessItemModel.h
     models/FrameItemModel.h
     # models/EventItemModel.h
