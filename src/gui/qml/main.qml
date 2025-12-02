@@ -30,6 +30,16 @@ ApplicationWindow {
     // Selection Mode: "process" or "frame"
     property string selectionMode: "process"
 
+    // Update ViewModel when selection changes
+    onSelectedFrameIdChanged: {
+        var f = getSelectedFrame();
+        if (f && f.pid !== -1) {
+            memoryViewModel.selectedPid = f.pid;
+        } else {
+            memoryViewModel.selectedPid = -1;
+        }
+    }
+
     // Helper to find the current object instance for the selected PID
     function getSelectedProcess() {
         if (selectedPid === -1) return null;
@@ -292,113 +302,185 @@ ApplicationWindow {
                                 anchors.margins: 15
                                 spacing: 10
                                 
-                                Label { text: "INSPECTOR"; font.bold: true; color: mainWindow.textMuted }
-                                
-                                GridLayout {
-                                    columns: 2
-                                    rowSpacing: 10
-                                    columnSpacing: 20
-                                    
-                                    // Dynamic Labels based on Selection Mode
-                                    Label { text: mainWindow.selectionMode === "process" ? "PID:" : "Frame:"; color: mainWindow.textMuted }
-                                    Label { 
-                                        text: {
-                                            if (mainWindow.selectionMode === "process") {
-                                                var p = mainWindow.getSelectedProcess();
-                                                return p ? p.pid : "-";
-                                            } else {
-                                                var f = mainWindow.getSelectedFrame();
-                                                return f ? "F" + f.frameId : "-";
-                                            }
-                                        }
-                                        color: mainWindow.textColor; font.bold: true 
-                                    }
-                                    
-                                    Label { text: mainWindow.selectionMode === "process" ? "Priority:" : "Owner PID:"; color: mainWindow.textMuted }
-                                    Label { 
-                                        text: {
-                                            if (mainWindow.selectionMode === "process") {
-                                                var p = mainWindow.getSelectedProcess();
-                                                return p ? p.priority : "-";
-                                            } else {
-                                                var f = mainWindow.getSelectedFrame();
-                                                return f ? (f.pid === -1 ? "Free" : f.pid) : "-";
-                                            }
-                                        }
-                                        color: mainWindow.textColor; font.bold: true 
-                                    }
-                                    
-                                    Label { text: mainWindow.selectionMode === "process" ? "State:" : "Page:"; color: mainWindow.textMuted }
-                                    Label { 
-                                        text: {
-                                            if (mainWindow.selectionMode === "process") {
-                                                var p = mainWindow.getSelectedProcess();
-                                                return p ? p.state : "-";
-                                            } else {
-                                                var f = mainWindow.getSelectedFrame();
-                                                return f ? (f.pid === -1 ? "-" : "P" + f.pid) : "-"; // Mock Page info if not available
-                                            }
-                                        }
-                                        color: mainWindow.textColor; font.bold: true 
-                                    }
-                                }
-                                
+                                // Dynamic Title
                                 Label { 
-                                    text: mainWindow.selectionMode === "process" ? "Burst Sequence:" : "Content Preview:"; 
-                                    color: mainWindow.textMuted; font.pixelSize: 12; topPadding: 10 
+                                    text: (mainWindow.selectionMode === "frame" && memoryViewModel.selectedPid !== -1) 
+                                          ? "Process " + memoryViewModel.selectedPid + " Memory Map"
+                                          : "INSPECTOR"
+                                    font.bold: true
+                                    color: mainWindow.textMuted 
                                 }
                                 
-                                // Visual Burst Sequence (Mock for Eye Candy)
-                                ListView {
-                                    visible: mainWindow.selectionMode === "process"
+                                // --- Standard Inspector (Process or Empty Frame) ---
+                                Item {
+                                    visible: !(mainWindow.selectionMode === "frame" && memoryViewModel.selectedPid !== -1)
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: 30
-                                    orientation: ListView.Horizontal
-                                    spacing: 4
-                                    clip: true
+                                    Layout.fillHeight: true
                                     
-                                    // If no process selected, empty model. Else show mock sequence.
-                                    model: mainWindow.getSelectedProcess() ? 6 : 0
-                                    
-                                    delegate: Rectangle {
-                                        width: index % 2 == 0 ? 40 : 20 // CPU longer than IO
-                                        height: 20
-                                        radius: 3
-                                        // Alternate colors: CPU (Blue), IO (Yellow)
-                                        color: index % 2 == 0 ? mainWindow.accentColor : "#f9e2af"
-                                        opacity: 0.8
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        spacing: 10
                                         
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: index % 2 == 0 ? "CPU" : "IO"
-                                            font.pixelSize: 9
-                                            font.bold: true
-                                            color: "#11111b"
+                                        GridLayout {
+                                            columns: 2
+                                            rowSpacing: 10
+                                            columnSpacing: 20
+                                            
+                                            // Dynamic Labels based on Selection Mode
+                                            Label { text: mainWindow.selectionMode === "process" ? "PID:" : "Frame:"; color: mainWindow.textMuted }
+                                            Label { 
+                                                text: {
+                                                    if (mainWindow.selectionMode === "process") {
+                                                        var p = mainWindow.getSelectedProcess();
+                                                        return p ? p.pid : "-";
+                                                    } else {
+                                                        var f = mainWindow.getSelectedFrame();
+                                                        return f ? "F" + f.frameId : "-";
+                                                    }
+                                                }
+                                                color: mainWindow.textColor; font.bold: true 
+                                            }
+                                            
+                                            Label { text: mainWindow.selectionMode === "process" ? "Priority:" : "Owner PID:"; color: mainWindow.textMuted }
+                                            Label { 
+                                                text: {
+                                                    if (mainWindow.selectionMode === "process") {
+                                                        var p = mainWindow.getSelectedProcess();
+                                                        return p ? p.priority : "-";
+                                                    } else {
+                                                        var f = mainWindow.getSelectedFrame();
+                                                        return f ? (f.pid === -1 ? "Free" : f.pid) : "-";
+                                                    }
+                                                }
+                                                color: mainWindow.textColor; font.bold: true 
+                                            }
+                                            
+                                            Label { text: mainWindow.selectionMode === "process" ? "State:" : "Page:"; color: mainWindow.textMuted }
+                                            Label { 
+                                                text: {
+                                                    if (mainWindow.selectionMode === "process") {
+                                                        var p = mainWindow.getSelectedProcess();
+                                                        return p ? p.state : "-";
+                                                    } else {
+                                                        var f = mainWindow.getSelectedFrame();
+                                                        return f ? (f.pid === -1 ? "-" : "P" + f.pid) : "-"; // Mock Page info if not available
+                                                    }
+                                                }
+                                                color: mainWindow.textColor; font.bold: true 
+                                            }
                                         }
+                                        
+                                        Label { 
+                                            text: mainWindow.selectionMode === "process" ? "Burst Sequence:" : "Content Preview:"; 
+                                            color: mainWindow.textMuted; font.pixelSize: 12; topPadding: 10 
+                                        }
+                                        
+                                        // Visual Burst Sequence (Mock for Eye Candy)
+                                        ListView {
+                                            visible: mainWindow.selectionMode === "process"
+                                            Layout.fillWidth: true
+                                            Layout.preferredHeight: 30
+                                            orientation: ListView.Horizontal
+                                            spacing: 4
+                                            clip: true
+                                            
+                                            // If no process selected, empty model. Else show mock sequence.
+                                            model: mainWindow.getSelectedProcess() ? 6 : 0
+                                            
+                                            delegate: Rectangle {
+                                                width: index % 2 == 0 ? 40 : 20 // CPU longer than IO
+                                                height: 20
+                                                radius: 3
+                                                // Alternate colors: CPU (Blue), IO (Yellow)
+                                                color: index % 2 == 0 ? mainWindow.accentColor : "#f9e2af"
+                                                opacity: 0.8
+                                                
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: index % 2 == 0 ? "CPU" : "IO"
+                                                    font.pixelSize: 9
+                                                    font.bold: true
+                                                    color: "#11111b"
+                                                }
+                                            }
+                                        }
+
+                                        // Frame Content Preview (Mock)
+                                        Rectangle {
+                                            visible: mainWindow.selectionMode === "frame"
+                                            Layout.fillWidth: true
+                                            Layout.preferredHeight: 30
+                                            color: "#2a2a35"
+                                            radius: 4
+                                            border.color: mainWindow.borderColor
+                                            
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: {
+                                                    var f = mainWindow.getSelectedFrame();
+                                                    return (f && f.pid !== -1) ? "0x" + (f.frameId * 12345).toString(16).toUpperCase() : "Empty";
+                                                }
+                                                color: "#a6adc8"
+                                                font.family: "Courier New"
+                                            }
+                                        }
+                                        
+                                        Item { Layout.fillHeight: true } // Spacer
                                     }
                                 }
 
-                                // Frame Content Preview (Mock)
-                                Rectangle {
-                                    visible: mainWindow.selectionMode === "frame"
+                                // --- Page Table View (Frame Selected & Valid PID) ---
+                                ListView {
+                                    visible: (mainWindow.selectionMode === "frame" && memoryViewModel.selectedPid !== -1)
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: 30
-                                    color: "#2a2a35"
-                                    radius: 4
-                                    border.color: mainWindow.borderColor
-                                    
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: {
-                                            var f = mainWindow.getSelectedFrame();
-                                            return (f && f.pid !== -1) ? "0x" + (f.frameId * 12345).toString(16).toUpperCase() : "Empty";
+                                    Layout.fillHeight: true
+                                    clip: true
+                                    model: memoryViewModel.pageTable
+                                    spacing: 2
+
+                                    header: RowLayout {
+                                        width: parent.width
+                                        spacing: 10
+                                        Text { text: "Page"; color: mainWindow.textMuted; font.bold: true; Layout.preferredWidth: 40 }
+                                        Text { text: "Frame"; color: mainWindow.textMuted; font.bold: true; Layout.preferredWidth: 50 }
+                                        Text { text: "Status"; color: mainWindow.textMuted; font.bold: true; Layout.fillWidth: true }
+                                    }
+
+                                    delegate: Rectangle {
+                                        width: ListView.view.width
+                                        height: 24
+                                        color: index % 2 === 0 ? "transparent" : "#1e1e2e"
+                                        radius: 4
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 5
+                                            spacing: 10
+                                            
+                                            Text { 
+                                                text: model.pageNumber
+                                                color: mainWindow.textColor
+                                                font.family: "Consolas"
+                                                Layout.preferredWidth: 40
+                                            }
+                                            
+                                            Text { 
+                                                text: model.frameNumber
+                                                color: mainWindow.accentColor
+                                                font.bold: true
+                                                Layout.preferredWidth: 50
+                                            }
+                                            
+                                            Text { 
+                                                text: model.state
+                                                // Green if Valid (frameNumber != "—"), Gray otherwise
+                                                color: model.frameNumber !== "—" ? mainWindow.successColor : mainWindow.textMuted
+                                                font.bold: true
+                                                Layout.fillWidth: true
+                                            }
                                         }
-                                        color: "#a6adc8"
-                                        font.family: "Courier New"
                                     }
                                 }
-                                
-                                Item { Layout.fillHeight: true } // Spacer
                             }
                         }
 
