@@ -5,6 +5,6 @@
         <file>MemoryMonitor.qml</file>
         <file>BlockingPanel.qml</file>
         <file>ControlPanel.qml</file>
-        <file>GanttChart.qml</file>
+        <file>ExecutionLog.qml</file>
     </qresource>
 </RCC>

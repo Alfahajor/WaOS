@@ -65,10 +65,10 @@ void SimulationController::registerMemoryViewModel(waos::gui::viewmodels::Memory
   }
 }
 
-void SimulationController::registerGanttViewModel(waos::gui::viewmodels::GanttViewModel* vm) {
+void SimulationController::registerExecutionLogViewModel(waos::gui::viewmodels::ExecutionLogViewModel* vm) {
     if (vm) {
         vm->setSimulator(m_simulator.get());
-        connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::GanttViewModel::reset);
+        connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::ExecutionLogViewModel::reset);
     }
 }
 

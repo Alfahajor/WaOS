@@ -7,7 +7,7 @@
 #include "../mock/MockSimulator.h"
 #include "../viewmodels/MemoryMonitorViewModel.h"
 #include "../viewmodels/ProcessMonitorViewModel.h"
-#include "../viewmodels/GanttViewModel.h"
+#include "../viewmodels/ExecutionLogViewModel.h"
 
 namespace waos::gui::controllers {
 
@@ -34,7 +34,7 @@ public:
 
     void registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm);
     void registerMemoryViewModel(waos::gui::viewmodels::MemoryMonitorViewModel* vm);
-    void registerGanttViewModel(waos::gui::viewmodels::GanttViewModel* vm);
+    void registerExecutionLogViewModel(waos::gui::viewmodels::ExecutionLogViewModel* vm);
 
 signals:
     void isRunningChanged();

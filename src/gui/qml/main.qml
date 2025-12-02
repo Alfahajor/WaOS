@@ -56,7 +56,7 @@ ApplicationWindow {
                     text: "Bloqueos"
                 }
                 TabButton {
-                    text: "Gantt / Log"
+                    text: "Log de Ejecución"
                 }
             }
             
@@ -83,8 +83,8 @@ ApplicationWindow {
                     Layout.fillHeight: true
                 }
                 
-                // Diagrama de Gantt
-                GanttChart {
+                // Log de Ejecución
+                ExecutionLog {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                 }
