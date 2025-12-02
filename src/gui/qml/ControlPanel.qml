@@ -2,60 +2,90 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
+import QtCore
 
 Rectangle {
-    color: "#eee"
-    border.color: "#ccc"
-    height: 140 // Increased height for config rows
+    id: controlPanel
+    color: "#f5f5f5"
+    border.color: "#dcdcdc"
+    
+    // Allow the height to adjust to content
+    implicitHeight: mainCol.implicitHeight + 20
+    Layout.fillWidth: true
 
     ColumnLayout {
+        id: mainCol
         anchors.fill: parent
         anchors.margins: 10
-        spacing: 10
+        spacing: 15
 
-        // --- Configuration Row ---
+        // --- Section 1: Configuration (Scheduler & Memory) ---
         RowLayout {
-            enabled: !simulationController.isRunning
-            spacing: 10
+            Layout.fillWidth: true
+            spacing: 20
 
-            Label { text: "Scheduler:" }
-            ComboBox {
-                id: schedulerCombo
-                model: ["FCFS", "Round Robin", "SJF", "Priority"]
-                currentIndex: 0
+            // Scheduler Configuration
+            RowLayout {
+                spacing: 8
+                Label { text: "Scheduler:"; font.bold: true }
+                ComboBox {
+                    id: schedulerCombo
+                    model: ["FCFS", "Round Robin", "SJF", "Priority"]
+                    currentIndex: 0
+                    Layout.preferredWidth: 140
+                }
             }
 
-            Label { 
-                text: "Quantum:" 
+            // Quantum (Only for Round Robin)
+            RowLayout {
                 visible: schedulerCombo.currentText === "Round Robin"
-            }
-            SpinBox {
-                id: quantumSpin
-                from: 1
-                to: 100
-                value: 5
-                visible: schedulerCombo.currentText === "Round Robin"
+                spacing: 8
+                Label { text: "Quantum:"; font.bold: true }
+                SpinBox {
+                    id: quantumSpin
+                    from: 1
+                    to: 100
+                    value: 5
+                    editable: true
+                    Layout.preferredWidth: 100
+                }
             }
 
-            Label { text: "Memory:" }
-            ComboBox {
-                id: memoryCombo
-                model: ["FIFO", "LRU", "Optimal"]
-                currentIndex: 0
+            // Memory Configuration
+            RowLayout {
+                spacing: 8
+                Label { text: "Memory:"; font.bold: true }
+                ComboBox {
+                    id: memoryCombo
+                    model: ["FIFO", "LRU", "Optimal"]
+                    currentIndex: 0
+                    Layout.preferredWidth: 120
+                }
             }
+            
+            Item { Layout.fillWidth: true } // Spacer
         }
 
-        // --- File & Load Row ---
+        // --- Section 2: File Selection ---
         RowLayout {
-            enabled: !simulationController.isRunning
+            Layout.fillWidth: true
             spacing: 10
+            enabled: !simulationController.isRunning
 
-            Label { text: "Processes File:" }
+            Label { text: "Processes File:"; font.bold: true }
+            
             TextField {
                 id: pathField
                 text: "tests/mock/test_processes.txt"
                 Layout.fillWidth: true
-                placeholderText: "Path to process file..."
+                placeholderText: "Select a process file..."
+                selectByMouse: true
+                readOnly: false 
+            }
+
+            Button {
+                text: "Browse..."
+                onClicked: fileDialog.open()
             }
 
             Button {
@@ -72,46 +102,26 @@ Rectangle {
             }
         }
 
-        // --- Control Row ---
-        RowLayout {
-            spacing: 20
+                // --- Section 3: Simulation Controls ---
+        // Removed redundant controls here as they are now in the floating bar
+        Item { Layout.fillWidth: true; height: 10 } 
+    }
 
-            Button {
-                text: simulationController.isRunning ? "Pause" : "Start"
-                onClicked: {
-                    if (simulationController.isRunning) simulationController.stop()
-                    else simulationController.start()
-                }
-            }
+    FileDialog {
+    }
 
-            Button {
-                text: "Step"
-                enabled: !simulationController.isRunning
-                onClicked: simulationController.step()
+    FileDialog {
+        id: fileDialog
+        title: "Select Process File"
+        nameFilters: ["Text files (*.txt)", "All files (*)"]
+        currentFolder: StandardPaths.standardLocations(StandardPaths.DesktopLocation)[0]
+        onAccepted: {
+            var path = selectedFile.toString()
+            // Clean up URL prefix for local files
+            if (path.startsWith("file:///")) {
+                path = path.substring(8)
             }
-
-            Button {
-                text: "Reset"
-                onClicked: simulationController.reset()
-            }
-
-            Label {
-                text: "Speed:"
-            }
-
-            Slider {
-                from: 100
-                to: 2000
-                value: simulationController.tickInterval
-                onMoved: simulationController.tickInterval = value
-            }
-            
-            Item { Layout.fillWidth: true } // Spacer
-            
-            ColumnLayout {
-                Label { text: "Current: " + simulationController.schedulerAlgorithm; font.pixelSize: 10 }
-                Label { text: "Current: " + simulationController.memoryAlgorithm; font.pixelSize: 10 }
-            }
+            pathField.text = path
         }
     }
 }
