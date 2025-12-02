@@ -124,25 +124,28 @@ Rectangle {
                     Label { text: model.modelData.waitTime; Layout.preferredWidth: 60; color: textColor }
                     Label { text: model.modelData.cpuTime; Layout.preferredWidth: 60; color: textColor }
                     
-                    // Burst Progress Bar
-                    Rectangle {
+                    // Burst Progress (Dot Matrix)
+                    Row {
                         Layout.fillWidth: true
-                        height: 8
-                        radius: 4
-                        color: "#313244"
+                        height: 12
+                        spacing: 4
                         
-                        Rectangle {
-                            width: parent.width * 0.5 // Placeholder logic, ideally model has progress
-                            height: parent.height
-                            radius: 4
-                            color: accentColor
-                        }
-                        
-                        Label {
-                            anchors.centerIn: parent
-                            text: model.modelData.currentBurst
-                            font.pixelSize: 10
-                            color: textColor
+                        property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 // Mock progress
+                        property bool isBlocked: model.modelData.state.toString().startsWith("Bloqueado")
+
+                        Repeater {
+                            model: 10
+                            Rectangle {
+                                width: 6; height: 6
+                                radius: 3
+                                color: {
+                                    if (index < parent.progress) {
+                                        return parent.isBlocked ? "#f38ba8" : accentColor
+                                    } else {
+                                        return "#313244" // Inactive gray
+                                    }
+                                }
+                            }
                         }
                     }
                 }

@@ -225,7 +225,7 @@ ApplicationWindow {
                         // Blocked Processes (Bottom Left)
                         BlockedProcesses {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 180
+                            Layout.preferredHeight: 220
                         }
                     }
                 }
