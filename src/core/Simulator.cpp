@@ -147,16 +147,7 @@ namespace waos::core {
     uint64_t now = m_clock.getTime();
     emit clockTicked(now);
 
-    // Process Arrivals (May cause Preemption)
-    handleArrivals();
-
-    // IO Devices (Parallel to CPU)
-    handleIO();
-
-    // Memory Disk Operations (Parallel to CPU)
-    handlePageFaults();
-
-    // Kernel / CPU Execution (Orchestration)
+    // Current running process executes its burst for this tick
     if (m_contextSwitchCounter > 0) {
       // Context Switch Overhead, CPU is busy doing kernel work
       m_contextSwitchCounter--;
@@ -172,10 +163,19 @@ namespace waos::core {
     } else {
       // CPU is free for user process
       handleCpuExecution();
-
-      // Only schedule if we are not currently switching and have no running process
-      if (m_runningProcess == nullptr && m_contextSwitchCounter == 0) handleScheduling();
     }
+
+    // Process Arrivals (May cause Preemption)
+    handleArrivals();
+
+    // IO Devices (Parallel to CPU)
+    handleIO();
+
+    // Memory Disk Operations (Parallel to CPU)
+    handlePageFaults();
+
+    // Scheduling logic runs if CPU is free AND no switch is in progress.
+    if (m_runningProcess == nullptr && m_contextSwitchCounter == 0) handleScheduling();
 
     updateMetrics();
     m_clock.tick();
@@ -258,8 +258,6 @@ namespace waos::core {
 
         it = m_blockedQueue.erase(it);
         emit logMessage(QString("Process P%1 finished I/O.").arg(p->getPid()));
-      } else {
-        ++it;
       }
     }
   }
@@ -287,8 +285,6 @@ namespace waos::core {
         
         emit logMessage(QString("Process P%1 resolved Page Fault.").arg(info.process->getPid()));
         it = m_memoryWaitQueue.erase(it);
-      } else {
-        ++it;
       }
     }
   }
@@ -383,14 +379,16 @@ namespace waos::core {
     }
 
     // Initiate Context Switch
-    m_nextProcess = candidate;
-    m_contextSwitchCounter = m_contextSwitchDuration;
-    m_totalContextSwitches++;
+    m_runningProcess = candidate;
+    m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
 
-    emit logMessage(QString("Scheduler selected P%1. Switching context...").arg(candidate->getPid()));
+    emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+    emit logMessage(QString("Scheduler selected P%1. Starting immediately (No CS overhead)").arg(candidate->getPid()));
   }
 
   void Simulator::triggerContextSwitch(Process* current, Process* next) {
+    bool isPreemption = (current != nullptr && current->getState() != ProcessState::TERMINATED);
+
     if (current) {
       // Reset Quantum on Preemption/Yield (Returning to Ready)
       current->resetQuantum();
@@ -403,12 +401,20 @@ namespace waos::core {
 
     // If we have a specific next process (direct switch), set it up
     // Otherwise, set running to null so handleScheduling picks one
-    if (next) {
+    if (isPreemption) {
       m_nextProcess = next;
       m_contextSwitchCounter = m_contextSwitchDuration;
       m_totalContextSwitches++;
+    } else {
+      // Immediate switch for non-preemptive cases
+      if (next) {
+        m_runningProcess = next;
+        m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+        emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+      }
+      // If next is null, handleScheduling will pick one immediately in step()
+      m_contextSwitchCounter = 0;
     }
-    // If next is null, handleScheduling will run next tick or same tick if called before
   }
 
   uint64_t Simulator::getCurrentTime() const { return m_clock.getTime(); }
