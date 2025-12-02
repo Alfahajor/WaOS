@@ -25,6 +25,10 @@ ApplicationWindow {
 
     // Selected Process for Inspector
     property var selectedProcess: null
+    // Selected Frame for Inspector
+    property var selectedFrame: null
+    // Selection Mode: "process" or "frame"
+    property string selectionMode: "process"
 
     Rectangle {
         anchors.fill: parent
@@ -56,6 +60,50 @@ ApplicationWindow {
                             font.bold: true
                             color: mainWindow.textColor
                             Layout.alignment: Qt.AlignVCenter
+                        }
+                        
+                        // Navigation Buttons (Header)
+                        RowLayout {
+                            Layout.leftMargin: 40
+                            spacing: 10
+                            
+                            Button {
+                                text: "Dashboard"
+                                font.bold: true
+                                background: Rectangle {
+                                    color: tabBar.currentIndex === 0 ? mainWindow.accentColor : "transparent"
+                                    radius: 4
+                                    border.color: mainWindow.accentColor
+                                    border.width: 1
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: tabBar.currentIndex === 0 ? "#11111b" : mainWindow.textColor
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.bold: true
+                                }
+                                onClicked: tabBar.currentIndex = 0
+                            }
+                            
+                            Button {
+                                text: "Memory"
+                                font.bold: true
+                                background: Rectangle {
+                                    color: tabBar.currentIndex === 1 ? mainWindow.accentSecondary : "transparent"
+                                    radius: 4
+                                    border.color: mainWindow.accentSecondary
+                                    border.width: 1
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: tabBar.currentIndex === 1 ? "#11111b" : mainWindow.textColor
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.bold: true
+                                }
+                                onClicked: tabBar.currentIndex = 1
+                            }
                         }
                         
                         Item { Layout.fillWidth: true } // Spacer
@@ -159,41 +207,11 @@ ApplicationWindow {
                         anchors.fill: parent
                         spacing: 10
 
-                        // Tab Bar for Process Monitor / Memory Monitor
+                        // Hidden TabBar (Controlled by Header)
                         TabBar {
                             id: tabBar
+                            visible: false
                             Layout.fillWidth: true
-                            background: Rectangle { color: "transparent" }
-                            
-                            Repeater {
-                                model: ["Dashboard", "Memory Map"]
-                                TabButton {
-                                    text: modelData
-                                    width: implicitWidth + 40
-                                    
-                                    contentItem: Text {
-                                        text: parent.text
-                                        font.bold: true
-                                        color: parent.checked ? mainWindow.accentColor : mainWindow.textMuted
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                    }
-                                    
-                                    background: Rectangle {
-                                        color: parent.checked ? "#2089b4fa" : "transparent"
-                                        radius: 5
-                                        border.width: 0
-                                        
-                                        Rectangle {
-                                            width: parent.width
-                                            height: 3
-                                            anchors.bottom: parent.bottom
-                                            color: mainWindow.accentColor
-                                            visible: parent.parent.checked
-                                        }
-                                    }
-                                }
-                            }
                         }
 
                         // Main View (Process Monitor / Memory Monitor)
@@ -263,29 +281,43 @@ ApplicationWindow {
                                     rowSpacing: 10
                                     columnSpacing: 20
                                     
-                                    Label { text: "PID:"; color: mainWindow.textMuted }
+                                    // Dynamic Labels based on Selection Mode
+                                    Label { text: mainWindow.selectionMode === "process" ? "PID:" : "Frame:"; color: mainWindow.textMuted }
                                     Label { 
-                                        text: mainWindow.selectedProcess ? mainWindow.selectedProcess.pid : "-"
+                                        text: {
+                                            if (mainWindow.selectionMode === "process") return mainWindow.selectedProcess ? mainWindow.selectedProcess.pid : "-"
+                                            else return mainWindow.selectedFrame ? "F" + mainWindow.selectedFrame.frameId : "-"
+                                        }
                                         color: mainWindow.textColor; font.bold: true 
                                     }
                                     
-                                    Label { text: "Priority:"; color: mainWindow.textMuted }
+                                    Label { text: mainWindow.selectionMode === "process" ? "Priority:" : "Owner PID:"; color: mainWindow.textMuted }
                                     Label { 
-                                        text: mainWindow.selectedProcess ? mainWindow.selectedProcess.priority : "-"
+                                        text: {
+                                            if (mainWindow.selectionMode === "process") return mainWindow.selectedProcess ? mainWindow.selectedProcess.priority : "-"
+                                            else return mainWindow.selectedFrame ? (mainWindow.selectedFrame.pid === -1 ? "Free" : mainWindow.selectedFrame.pid) : "-"
+                                        }
                                         color: mainWindow.textColor; font.bold: true 
                                     }
                                     
-                                    Label { text: "State:"; color: mainWindow.textMuted }
+                                    Label { text: mainWindow.selectionMode === "process" ? "State:" : "Page:"; color: mainWindow.textMuted }
                                     Label { 
-                                        text: mainWindow.selectedProcess ? mainWindow.selectedProcess.state : "-"
+                                        text: {
+                                            if (mainWindow.selectionMode === "process") return mainWindow.selectedProcess ? mainWindow.selectedProcess.state : "-"
+                                            else return mainWindow.selectedFrame ? (mainWindow.selectedFrame.pid === -1 ? "-" : "P" + mainWindow.selectedFrame.pid) : "-" // Mock Page
+                                        }
                                         color: mainWindow.textColor; font.bold: true 
                                     }
                                 }
                                 
-                                Label { text: "Burst Sequence:"; color: mainWindow.textMuted; font.pixelSize: 12; topPadding: 10 }
+                                Label { 
+                                    text: mainWindow.selectionMode === "process" ? "Burst Sequence:" : "Content Preview:"; 
+                                    color: mainWindow.textMuted; font.pixelSize: 12; topPadding: 10 
+                                }
                                 
                                 // Visual Burst Sequence (Mock for Eye Candy)
                                 ListView {
+                                    visible: mainWindow.selectionMode === "process"
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 30
                                     orientation: ListView.Horizontal
@@ -310,6 +342,23 @@ ApplicationWindow {
                                             font.bold: true
                                             color: "#11111b"
                                         }
+                                    }
+                                }
+
+                                // Frame Content Preview (Mock)
+                                Rectangle {
+                                    visible: mainWindow.selectionMode === "frame"
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 30
+                                    color: "#2a2a35"
+                                    radius: 4
+                                    border.color: mainWindow.borderColor
+                                    
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: mainWindow.selectedFrame && mainWindow.selectedFrame.pid !== -1 ? "0x" + Math.floor(Math.random()*100000).toString(16) : "Empty"
+                                        color: "#a6adc8"
+                                        font.family: "Courier New"
                                     }
                                 }
                                 
