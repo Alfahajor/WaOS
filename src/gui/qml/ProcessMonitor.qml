@@ -85,9 +85,20 @@ Rectangle {
             delegate: Rectangle {
                 width: parent.width
                 height: 45
-                color: index % 2 == 0 ? bgRowEven : bgRowOdd
+                color: {
+                    if (mainWindow.selectedProcess && mainWindow.selectedProcess.pid === model.modelData.pid) {
+                        return "#313244" // Highlight selected
+                    }
+                    return index % 2 == 0 ? bgRowEven : bgRowOdd
+                }
                 radius: 5
-                border.width: 0
+                border.color: (mainWindow.selectedProcess && mainWindow.selectedProcess.pid === model.modelData.pid) ? accentColor : "transparent"
+                border.width: (mainWindow.selectedProcess && mainWindow.selectedProcess.pid === model.modelData.pid) ? 1 : 0
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: mainWindow.selectedProcess = model.modelData
+                }
 
                 RowLayout {
                     anchors.fill: parent
