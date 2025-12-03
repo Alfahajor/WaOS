@@ -218,8 +218,8 @@ ApplicationWindow {
                 orientation: Qt.Horizontal
 
                 handle: Rectangle {
-                    implicitWidth: 4
-                    color: SplitView.pressed ? mainWindow.accentColor : mainWindow.borderColor
+                    implicitWidth: 12 // Wider gap
+                    color: "transparent" // Invisible handle to create a gap
                 }
 
                 // Item 1: Left Container
@@ -276,7 +276,7 @@ ApplicationWindow {
                         // Blocked Processes (Bottom Left)
                         BlockedProcesses {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 220
+                            Layout.preferredHeight: 160 // Reduced height
                         }
                     }
                 }

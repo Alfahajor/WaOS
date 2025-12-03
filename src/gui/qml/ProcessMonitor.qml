@@ -16,6 +16,14 @@ Rectangle {
     property color borderColor: "#2d3436"
     property color bgCard: "#1e1e24" // Lighter for metrics
     
+    // Column Ratios (Total = 1.0)
+    property real rPid: 0.1
+    property real rState: 0.2
+    property real rPri: 0.1
+    property real rArr: 0.1
+    property real rWait: 0.1
+    property real rBurst: 0.4
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
@@ -99,18 +107,21 @@ Rectangle {
             height: 30
             color: "transparent"
             
-            RowLayout {
+            Row {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 10
-                spacing: 0 // Using Layout.preferredWidth for distribution
+                spacing: 0
                 
-                Label { text: "PID"; Layout.preferredWidth: 60; font.bold: true; color: textColor }
-                Label { text: "State"; Layout.preferredWidth: 120; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter }
-                Label { text: "Pri"; Layout.preferredWidth: 60; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter }
-                Label { text: "Arr"; Layout.preferredWidth: 60; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter } // Added Arrival
-                Label { text: "Wait"; Layout.preferredWidth: 60; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter }
-                Label { text: "Burst (Dots)"; Layout.fillWidth: true; font.bold: true; color: textColor }
+                // Available width for columns
+                property real availW: width
+                
+                Item { width: parent.availW * rPid; height: parent.height; Label { text: "PID"; anchors.verticalCenter: parent.verticalCenter; font.bold: true; color: textColor } }
+                Item { width: parent.availW * rState; height: parent.height; Label { text: "State"; anchors.centerIn: parent; font.bold: true; color: textColor } }
+                Item { width: parent.availW * rPri; height: parent.height; Label { text: "Pri"; anchors.centerIn: parent; font.bold: true; color: textColor } }
+                Item { width: parent.availW * rArr; height: parent.height; Label { text: "Arr"; anchors.centerIn: parent; font.bold: true; color: textColor } }
+                Item { width: parent.availW * rWait; height: parent.height; Label { text: "Wait"; anchors.centerIn: parent; font.bold: true; color: textColor } }
+                Item { width: parent.availW * rBurst; height: parent.height; Label { text: "Burst (Dots)"; anchors.verticalCenter: parent.verticalCenter; font.bold: true; color: textColor } }
             }
         }
 
@@ -122,11 +133,11 @@ Rectangle {
             Layout.fillHeight: true
             clip: true
             model: processViewModel.processList
-            spacing: 0 // No spacing, just dividers
+            spacing: 0 
 
             delegate: Item {
                 width: parent.width
-                height: 50
+                height: 40 // Reduced height slightly
                 
                 // Selection Background (Subtle)
                 Rectangle {
@@ -151,28 +162,33 @@ Rectangle {
                     visible: mainWindow.selectedPid === model.modelData.pid
                 }
 
-                RowLayout {
+                Row {
                     anchors.fill: parent
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
                     spacing: 0
                     
+                    property real availW: width
+                    
                     // PID
-                    Label { 
-                        text: "P" + model.modelData.pid
-                        Layout.preferredWidth: 60
-                        color: textColor
-                        font.pixelSize: 14
+                    Item {
+                        width: parent.availW * rPid
+                        height: parent.height
+                        Label { 
+                            text: "P" + model.modelData.pid
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: textColor
+                            font.pixelSize: 14
+                        }
                     }
                     
                     // State Badge (Centered)
                     Item {
-                        Layout.preferredWidth: 120
-                        Layout.fillHeight: true
+                        width: parent.availW * rState
+                        height: parent.height
                         
                         Rectangle {
                             anchors.centerIn: parent
-                            // width moved to bottom
                             height: 22
                             radius: 4
                             
@@ -184,9 +200,6 @@ Rectangle {
                                  return "#b2bec3";
                             }
                             
-                            // Solid background for badge as per image reference (dark text on colored bg)
-                            // OR colored text on dark bg. Reference shows: Green BG with Dark Text for Running?
-                            // Actually reference shows: Green Text on Dark Green BG.
                             color: Qt.rgba(stateColor.r, stateColor.g, stateColor.b, 0.15)
                             
                             Text {
@@ -204,55 +217,60 @@ Rectangle {
                                 font.pixelSize: 11
                             }
                             
-                            width: stateText.implicitWidth + 16 // Adaptive width defined after Text
+                            width: stateText.implicitWidth + 16 
                         }
                     }
                     
-                    Label { text: model.modelData.priority; Layout.preferredWidth: 60; color: textColor; horizontalAlignment: Text.AlignHCenter }
-                    Label { text: "0"; Layout.preferredWidth: 60; color: textColor; horizontalAlignment: Text.AlignHCenter } // Mock Arrival
-                    Label { text: model.modelData.waitTime; Layout.preferredWidth: 60; color: textColor; horizontalAlignment: Text.AlignHCenter }
+                    Item { width: parent.availW * rPri; height: parent.height; Label { text: model.modelData.priority; anchors.centerIn: parent; color: textColor } }
+                    Item { width: parent.availW * rArr; height: parent.height; Label { text: "0"; anchors.centerIn: parent; color: textColor } }
+                    Item { width: parent.availW * rWait; height: parent.height; Label { text: model.modelData.waitTime; anchors.centerIn: parent; color: textColor } }
                     
                     // Burst Progress (Dots + Text)
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
+                    Item {
+                        width: parent.availW * rBurst
+                        height: parent.height
                         
-                        // Dots
                         Row {
-                            spacing: 4
-                            property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 
-                            property bool isBlocked: model.modelData.state.toString().startsWith("Bloqueado")
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 10
+                            
+                            // Dots
+                            Row {
+                                spacing: 4
+                                property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 
+                                property bool isBlocked: model.modelData.state.toString().startsWith("Bloqueado")
 
-                            Repeater {
-                                model: 10
-                                Rectangle {
-                                    width: 6; height: 6
-                                    radius: 3
-                                    color: {
-                                        if (index < parent.progress) {
-                                            if (parent.isBlocked) return errorColor
-                                            return accentColor // Blue/Violet
-                                        } else {
-                                            return "#333" // Dark Gray
+                                Repeater {
+                                    model: 10
+                                    Rectangle {
+                                        width: 6; height: 6
+                                        radius: 3
+                                        color: {
+                                            if (index < parent.progress) {
+                                                if (parent.isBlocked) return errorColor
+                                                return accentColor // Blue/Violet
+                                            } else {
+                                                return "#333" // Dark Gray
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        
-                        // Text Indicator
-                        Text {
-                            text: {
-                                var s = model.modelData.state.toString();
-                                if (s.startsWith("Bloqueado")) return "Wait";
-                                return (10 - ((model.modelData.pid + model.modelData.cpuTime) % 10)) + "rem";
+                            
+                            // Text Indicator
+                            Text {
+                                text: {
+                                    var s = model.modelData.state.toString();
+                                    if (s.startsWith("Bloqueado")) return "Wait";
+                                    return (10 - ((model.modelData.pid + model.modelData.cpuTime) % 10)) + "rem";
+                                }
+                                color: {
+                                    var s = model.modelData.state.toString();
+                                    if (s.startsWith("Bloqueado")) return errorColor;
+                                    return "#636e72";
+                                }
+                                font.pixelSize: 11
                             }
-                            color: {
-                                var s = model.modelData.state.toString();
-                                if (s.startsWith("Bloqueado")) return errorColor;
-                                return "#636e72";
-                            }
-                            font.pixelSize: 11
                         }
                     }
                 }

@@ -9,7 +9,7 @@ Item {
     property color bgTrack: "#252530" // Lighter background for tracks (Visible)
     
     // Specific Queue Colors
-    property color readyColor: "#f1c40f"   // Yellow/Gold
+    property color readyColor: "#a6e3a1"   // Green (Catppuccin Green)
     property color blockedColor: "#e74c3c" // Red
     property color memoryColor: "#e67e22"  // Orange
     
@@ -39,7 +39,7 @@ Item {
                 text: "Ready Q."
                 font.bold: true
                 font.pixelSize: 13 // Larger font
-                color: "white" // User requested white for Ready Q section
+                color: readyColor // Green label
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
             }
