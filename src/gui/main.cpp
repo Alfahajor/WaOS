@@ -14,6 +14,7 @@
 #include "controllers/SimulationController.h"
 #include "viewmodels/BlockingEventsViewModel.h"
 #include "viewmodels/ExecutionLogViewModel.h"
+#include "viewmodels/GanttViewModel.h"
 #include "viewmodels/MemoryMonitorViewModel.h"
 #include "viewmodels/ProcessMonitorViewModel.h"
 
@@ -37,12 +38,14 @@ int main(int argc, char* argv[]) {
   auto* memoryVM = new waos::gui::viewmodels::MemoryMonitorViewModel(&app);
   auto* logVM = new waos::gui::viewmodels::ExecutionLogViewModel(&app);
   auto* blockingVM = new waos::gui::viewmodels::BlockingEventsViewModel(&app);
+  auto* ganttVM = new waos::gui::viewmodels::GanttViewModel(&app);
 
   // Link them
   controller->registerProcessViewModel(processVM);
   controller->registerMemoryViewModel(memoryVM);
   controller->registerExecutionLogViewModel(logVM);
   controller->registerBlockingEventsViewModel(blockingVM);
+  controller->registerGanttViewModel(ganttVM);
 
   // Register as context properties (Global objects in QML)
   engine.rootContext()->setContextProperty("simulationController", controller);
@@ -50,6 +53,7 @@ int main(int argc, char* argv[]) {
   engine.rootContext()->setContextProperty("memoryViewModel", memoryVM);
   engine.rootContext()->setContextProperty("executionLogViewModel", logVM);
   engine.rootContext()->setContextProperty("blockingViewModel", blockingVM);
+  engine.rootContext()->setContextProperty("ganttViewModel", ganttVM);
 
   // Load main QML
   const QUrl url(QStringLiteral("qrc:/main.qml"));

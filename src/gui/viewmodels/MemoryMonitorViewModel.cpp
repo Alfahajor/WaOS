@@ -53,6 +53,7 @@ void MemoryMonitorViewModel::onClockTicked(uint64_t tick) {
 
     item->setFrameId(frameInfo.frameId);
     item->setOccupied(frameInfo.isOccupied);
+    item->setPid(frameInfo.isOccupied ? frameInfo.ownerPid : -1);
 
     if (frameInfo.isOccupied) {
       QString label = QString("P%1:%2")
@@ -61,7 +62,7 @@ void MemoryMonitorViewModel::onClockTicked(uint64_t tick) {
       item->setLabel(label);
       item->setColor("#4CAF50");  // Green
     } else {
-      item->setLabel("Libre");
+      item->setLabel("Free");
       item->setColor("#9E9E9E");  // Grey
     }
 

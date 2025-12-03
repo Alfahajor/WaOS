@@ -6,6 +6,7 @@
 
 #include "../viewmodels/BlockingEventsViewModel.h"
 #include "../viewmodels/ExecutionLogViewModel.h"
+#include "../viewmodels/GanttViewModel.h"
 #include "../viewmodels/MemoryMonitorViewModel.h"
 #include "../viewmodels/ProcessMonitorViewModel.h"
 #include "waos/core/Simulator.h"
@@ -39,6 +40,7 @@ class SimulationController : public QObject {
   void registerMemoryViewModel(waos::gui::viewmodels::MemoryMonitorViewModel* vm);
   void registerExecutionLogViewModel(waos::gui::viewmodels::ExecutionLogViewModel* vm);
   void registerBlockingEventsViewModel(waos::gui::viewmodels::BlockingEventsViewModel* vm);
+  void registerGanttViewModel(waos::gui::viewmodels::GanttViewModel* vm);
 
  signals:
   void isRunningChanged();

@@ -17,6 +17,7 @@ set(GUI_SOURCES
     viewmodels/MemoryMonitorViewModel.cpp
     viewmodels/BlockingEventsViewModel.cpp
     viewmodels/ExecutionLogViewModel.cpp
+    viewmodels/GanttViewModel.cpp
     models/ProcessItemModel.cpp
     models/FrameItemModel.cpp
     # models/EventItemModel.cpp
@@ -32,6 +33,7 @@ set(GUI_HEADERS
     viewmodels/MemoryMonitorViewModel.h
     viewmodels/BlockingEventsViewModel.h
     viewmodels/ExecutionLogViewModel.h
+    viewmodels/GanttViewModel.h
     models/ProcessItemModel.h
     models/FrameItemModel.h
     models/PageTableItemModel.h
