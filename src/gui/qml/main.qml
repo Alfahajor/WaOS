@@ -283,40 +283,31 @@ ApplicationWindow {
 
                 // Item 2: Right Container
                 Rectangle {
-                    color: "transparent"
+                    color: mainWindow.bgLighter // Lighter background for the container
                     SplitView.preferredWidth: parent.width * 0.3
 
                     ColumnLayout {
                         anchors.fill: parent
+                        anchors.margins: 10
                         spacing: 10
 
                         // 1. Inspector Section
-                        Rectangle {
+                        CollapsibleSection {
+                            title: (mainWindow.selectionMode === "frame" && memoryViewModel.selectedPid !== -1) 
+                                   ? "Process " + memoryViewModel.selectedPid + " Memory Map"
+                                   : "INSPECTOR"
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 200
-                            color: mainWindow.bgCard
-                            radius: 8
-                            border.color: mainWindow.borderColor
-
+                            // Allow it to shrink if needed, but prefer implicit height
+                            
                             ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 15
                                 spacing: 10
-                                
-                                // Dynamic Title
-                                Label { 
-                                    text: (mainWindow.selectionMode === "frame" && memoryViewModel.selectedPid !== -1) 
-                                          ? "Process " + memoryViewModel.selectedPid + " Memory Map"
-                                          : "INSPECTOR"
-                                    font.bold: true
-                                    color: mainWindow.textMuted 
-                                }
                                 
                                 // --- Standard Inspector (Process or Empty Frame) ---
                                 Item {
                                     visible: !(mainWindow.selectionMode === "frame" && memoryViewModel.selectedPid !== -1)
                                     Layout.fillWidth: true
-                                    Layout.fillHeight: true
+                                    Layout.preferredHeight: 160 // Fixed height for content
                                     
                                     ColumnLayout {
                                         anchors.fill: parent
@@ -434,7 +425,7 @@ ApplicationWindow {
                                 ListView {
                                     visible: (mainWindow.selectionMode === "frame" && memoryViewModel.selectedPid !== -1)
                                     Layout.fillWidth: true
-                                    Layout.fillHeight: true
+                                    Layout.preferredHeight: 160
                                     clip: true
                                     model: memoryViewModel.pageTable
                                     spacing: 2
@@ -486,23 +477,17 @@ ApplicationWindow {
                         }
 
                         // 2. System Health Section
-                        Rectangle {
+                        CollapsibleSection {
+                            title: "SYSTEM HEALTH"
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 220 // Increased height for Gauges + Stats
-                            color: mainWindow.bgCard
-                            radius: 8
-                            border.color: mainWindow.borderColor
-
+                            
                             ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 15
                                 spacing: 10
-                                
-                                Label { text: "SYSTEM HEALTH"; font.bold: true; color: mainWindow.textMuted }
                                 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Layout.fillHeight: true
+                                    Layout.preferredHeight: 100
                                     spacing: 20
                                     
                                     // CPU Gauge
@@ -662,9 +647,14 @@ ApplicationWindow {
                         }
 
                         // 3. Execution Log (Fills remaining space)
-                        ExecutionLog {
+                        CollapsibleSection {
+                            title: "EXECUTION LOG"
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
+                            Layout.fillHeight: true // This one expands to fill space
+                            
+                            ExecutionLog {
+                                anchors.fill: parent
+                            }
                         }
                     }
                 }
