@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include "waos/scheduler/IScheduler.h"
-#include "waos/memory/IMemoryManager.h"
-#include "waos/core/Process.h"
+#include <iostream>
 #include <list>
 #include <map>
 #include <vector>
-#include <iostream>
+
+#include "waos/core/Process.h"
+#include "waos/memory/IMemoryManager.h"
+#include "waos/scheduler/IScheduler.h"
 
 using namespace waos::core;
 using namespace waos::scheduler;
@@ -18,9 +19,9 @@ using namespace waos::memory;
 using namespace waos::common;
 
 class MockScheduler : public IScheduler {
-public:
+ public:
   std::list<Process*> readyQueue;
-  int timeSlice = -1; // -1 = No quantum by default
+  int timeSlice = -1;  // -1 = No quantum by default
 
   void addProcess(Process* p) override {
     readyQueue.push_back(p);
@@ -42,7 +43,7 @@ public:
   // Métodos de visualización (mockeados para cumplir interfaz)
   std::vector<const Process*> peekReadyQueue() const override {
     std::vector<const Process*> ret;
-    for(auto* p : readyQueue) ret.push_back(p);
+    for (auto* p : readyQueue) ret.push_back(p);
     return ret;
   }
 
@@ -54,7 +55,7 @@ public:
 };
 
 class MockMemoryManager : public IMemoryManager {
-public:
+ public:
   // Map <PID, <PageNumber, IsLoaded>>
   std::map<int, std::map<int, bool>> memoryState;
 
@@ -87,7 +88,7 @@ public:
 
   void allocateForProcess(int pid, int requiredPages) override {
     // Inicializar mapa para evitar accesos inválidos
-    for(int i=0; i<requiredPages; i++) memoryState[pid][i] = false;
+    for (int i = 0; i < requiredPages; i++) memoryState[pid][i] = false;
   }
 
   void freeForProcess(int pid) override {
