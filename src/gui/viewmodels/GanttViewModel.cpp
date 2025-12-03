@@ -76,15 +76,15 @@ void GanttViewModel::onClockTicked(uint64_t tick) {
   // If process changed, close current block and start new one
   if (runningPid != m_currentPid) {
     // Close previous block if it wasn't the initial state
-    if (m_currentPid != -3 || (m_blocks.empty() && tick > 0)) { // -3 is initial uninitialized state
+    if (m_currentPid != -3 || (m_blocks.empty() && tick > 0)) {  // -3 is initial uninitialized state
       // If we had a running process (or idle/cs), finish its block
       // Now we record EVERYTHING including IDLE (-1) and CS (-2)
-      
+
       // Avoid adding block if duration is 0 (e.g. immediate switch)
       if (tick > m_currentBlockStart) {
-          beginInsertRows(QModelIndex(), m_blocks.size(), m_blocks.size());
-          m_blocks.push_back({m_currentPid, m_currentBlockStart, tick});
-          endInsertRows();
+        beginInsertRows(QModelIndex(), m_blocks.size(), m_blocks.size());
+        m_blocks.push_back({m_currentPid, m_currentBlockStart, tick});
+        endInsertRows();
       }
     }
 
@@ -97,7 +97,7 @@ void GanttViewModel::reset() {
   beginResetModel();
   m_blocks.clear();
   endResetModel();
-  m_currentPid = -3; // Reset to uninitialized
+  m_currentPid = -3;  // Reset to uninitialized
   m_currentBlockStart = 0;
   m_totalTicks = 0;
   emit totalTicksChanged();

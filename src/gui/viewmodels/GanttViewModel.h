@@ -50,7 +50,7 @@ class GanttViewModel : public QAbstractListModel {
   int m_totalTicks = 0;
 
   // State tracking for current block
-  int m_currentPid = -3; // -3: Uninitialized, -2: CS, -1: Idle, >=0: PID
+  int m_currentPid = -3;  // -3: Uninitialized, -2: CS, -1: Idle, >=0: PID
   uint64_t m_currentBlockStart = 0;
 };
 
