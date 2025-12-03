@@ -309,10 +309,15 @@ Rectangle {
 
                 contentItem: RowLayout {
                     spacing: 5
-                    // We remove the Image here to avoid the black square issue if SVG is bad.
-                    // Just use text for now to ensure it looks clean, or use a simple rectangle indicator.
+                    Image { 
+                        source: "qrc:/icons/check.svg"
+                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        fillMode: Image.PreserveAspectFit
+                        visible: true
+                        // Tinting would require ColorOverlay, assuming SVG is white or colored appropriately
+                    }
                     Text { 
-                        text: "✓ Apply Config"
+                        text: "Apply Config"
                         color: "#11111b" // Dark text on accent
                         font.bold: true
                         Layout.alignment: Qt.AlignCenter

@@ -146,10 +146,18 @@ ApplicationWindow {
                                 
                                 // Settings Button
                                 Button {
-                                    text: "⚙️"
-                                    font.pixelSize: 20
-                                    display: AbstractButton.TextOnly
-                                    background: Rectangle { color: "transparent" }
+                                    id: settingsButton
+                                    icon.source: "qrc:/icons/settings.svg"
+                                    icon.color: mainWindow.textColor
+                                    icon.width: 20; icon.height: 20
+                                    display: AbstractButton.IconOnly
+                                    
+                                    background: Rectangle { 
+                                        color: "transparent" 
+                                        radius: 4
+                                        border.color: settingsButton.hovered ? mainWindow.accentColor : "transparent"
+                                    }
+                                    
                                     onClicked: settingsDialog.open()
                                     ToolTip.visible: hovered; ToolTip.text: "Settings"
                                 }
