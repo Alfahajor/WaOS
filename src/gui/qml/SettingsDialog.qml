@@ -40,6 +40,7 @@ Dialog {
             schedulerCombo.currentText,
             quantumSpin.value,
             memoryCombo.currentText,
+            framesSpin.value,
             pathField.text
         )
     }
@@ -135,40 +136,78 @@ Dialog {
             Layout.fillWidth: true
             spacing: 8
             Label { text: "Memory Management"; color: textColor; font.bold: true }
-            ComboBox {
-                id: memoryCombo
-                model: ["FIFO", "LRU", "Optimal"]
-                currentIndex: 0
+            
+            RowLayout {
                 Layout.fillWidth: true
+                spacing: 10
                 
-                delegate: ItemDelegate {
-                    width: memoryCombo.width
+                ComboBox {
+                    id: memoryCombo
+                    model: ["FIFO", "LRU", "Optimal"]
+                    currentIndex: 0
+                    Layout.fillWidth: true
+                    
+                    delegate: ItemDelegate {
+                        width: memoryCombo.width
+                        contentItem: Text {
+                            text: modelData
+                            color: textColor
+                            font: memoryCombo.font
+                            elide: Text.ElideRight
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            color: memoryCombo.highlightedIndex === index ? accentColor : bgInput
+                            opacity: memoryCombo.highlightedIndex === index ? 0.3 : 1.0
+                        }
+                    }
+
                     contentItem: Text {
-                        text: modelData
-                        color: textColor
+                        leftPadding: 10
+                        text: memoryCombo.displayText
                         font: memoryCombo.font
-                        elide: Text.ElideRight
+                        color: textColor
                         verticalAlignment: Text.AlignVCenter
                     }
+
                     background: Rectangle {
-                        color: memoryCombo.highlightedIndex === index ? accentColor : bgInput
-                        opacity: memoryCombo.highlightedIndex === index ? 0.3 : 1.0
+                        implicitHeight: 40
+                        color: bgInput
+                        border.color: borderColor
+                        radius: 6
                     }
                 }
 
-                contentItem: Text {
-                    leftPadding: 10
-                    text: memoryCombo.displayText
-                    font: memoryCombo.font
-                    color: textColor
-                    verticalAlignment: Text.AlignVCenter
-                }
+                Label { text: "Frames:"; color: textColor }
+                
+                SpinBox {
+                    id: framesSpin
+                    from: 4
+                    to: 128
+                    value: 16
+                    editable: true
+                    Layout.preferredWidth: 100
+                    
+                    contentItem: TextInput {
+                        z: 2
+                        text: framesSpin.textFromValue(framesSpin.value, framesSpin.locale)
+                        font: framesSpin.font
+                        color: textColor
+                        selectionColor: accentColor
+                        selectedTextColor: "#ffffff"
+                        horizontalAlignment: Qt.AlignHCenter
+                        verticalAlignment: Qt.AlignVCenter
+                        readOnly: !framesSpin.editable
+                        validator: framesSpin.validator
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    }
 
-                background: Rectangle {
-                    implicitHeight: 40
-                    color: bgInput
-                    border.color: borderColor
-                    radius: 6
+                    background: Rectangle {
+                        implicitHeight: 40
+                        color: bgInput
+                        border.color: borderColor
+                        radius: 6
+                    }
                 }
             }
         }

@@ -198,6 +198,37 @@ Rectangle {
                         radius: 6
                     }
                 }
+
+                Label { text: "Frames"; color: controlPanel.textColor; font.bold: true }
+                SpinBox {
+                    id: framesSpin
+                    from: 4
+                    to: 128
+                    value: 16
+                    editable: true
+                    Layout.preferredWidth: 100
+                    
+                    contentItem: TextInput {
+                        z: 2
+                        text: framesSpin.textFromValue(framesSpin.value, framesSpin.locale)
+                        font: framesSpin.font
+                        color: controlPanel.textColor
+                        selectionColor: controlPanel.accentColor
+                        selectedTextColor: "#ffffff"
+                        horizontalAlignment: Qt.AlignHCenter
+                        verticalAlignment: Qt.AlignVCenter
+                        readOnly: !framesSpin.editable
+                        validator: framesSpin.validator
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    }
+
+                    background: Rectangle {
+                        implicitWidth: 100
+                        color: controlPanel.bgInput
+                        border.color: controlPanel.borderColor
+                        radius: 6
+                    }
+                }
             }
             
             Item { Layout.fillWidth: true } // Spacer
@@ -293,6 +324,7 @@ Rectangle {
                         schedulerCombo.currentText,
                         quantumSpin.value,
                         memoryCombo.currentText,
+                        framesSpin.value,
                         pathField.text
                     )
                 }
