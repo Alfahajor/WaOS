@@ -377,7 +377,7 @@ void Simulator::handleCpuExecution() {
         emit processStateChanged(m_runningProcess->getPid(), ProcessState::BLOCKED);
         m_blockedQueue.push_back(m_runningProcess);
         m_runningProcess = nullptr;
-        m_needsContextSwitchOverhead = true;  // Save context required
+        m_needsContextSwitchOverhead = false;  // Save context required
       } else {
         // Sigue siendo CPU (caso raro de CPU consecutiva o retorno de interrupción)
         // For now, treat as yield to re-evaluate priorities/quantum
@@ -406,7 +406,32 @@ void Simulator::handleScheduling() {
     return;
   }
 
-  // Initiate Context Switch
+  int pageRequired = candidate->getCurrentPageRequirement();
+  waos::memory::PageRequestResult result = m_memoryManager->requestPage(candidate->getPid(), pageRequired);
+
+  if (result != waos::memory::PageRequestResult::HIT) {
+    log(QString("Fallo de Página al intentar iniciar P%1 (Página %2). Iniciando CS.")
+          .arg(candidate->getPid())
+          .arg(pageRequired),
+      LogCategory::MEM);
+
+    candidate->incrementPageFaults();
+    m_totalPageFaults++;
+
+    // El proceso pasa a esperar memoria
+    candidate->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
+    emit processStateChanged(candidate->getPid(), ProcessState::WAITING_MEMORY);
+    m_memoryWaitQueue.push_back({candidate, m_pageFaultPenalty, pageRequired});
+
+    // Regla: Se produce un cambio de contexto en ese mismo instante.
+    // No hay runningProcess. Activamos el contador de CS para simular la gestión del fallo.
+    m_contextSwitchCounter = m_contextSwitchDuration; 
+    m_totalContextSwitches++; // Contamos el CS asociado al fallo
+    
+    // No asignamos m_runningProcess, por lo que el siguiente tick consumirá CS
+    return;
+  }
+
   // Only apply overhead if we need to save previous state (m_needsContextSwitchOverhead)
   if (m_contextSwitchDuration > 0 && m_needsContextSwitchOverhead) {
     m_nextProcess = candidate;
