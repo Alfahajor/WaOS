@@ -9,7 +9,23 @@ Rectangle {
     
     property color textColor: "#cdd6f4"
     property color rulerColor: "#a6adc8"
-    property int pixelPerTick: 20
+    property int pixelPerTick: 30 // Increased for better visibility of numbers
+
+    // Catppuccin Mocha Palette
+    property var processColors: [
+        "#89b4fa", // Blue
+        "#f38ba8", // Red
+        "#a6e3a1", // Green
+        "#fab387", // Peach
+        "#cba6f7", // Mauve
+        "#f9e2af", // Yellow
+        "#94e2d5", // Teal
+        "#f5c2e7", // Pink
+        "#eba0ac", // Maroon
+        "#89dceb", // Sky
+        "#f2cdcd", // Flamingo
+        "#f5e0dc"  // Rosewater
+    ]
 
     ColumnLayout {
         anchors.fill: parent
@@ -26,7 +42,7 @@ Rectangle {
         ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            contentHeight: 60 // Height for blocks + ruler
+            contentHeight: 70 
             
             ListView {
                 id: ganttList
@@ -36,55 +52,71 @@ Rectangle {
                 clip: true
 
                 delegate: Column {
+                    property int startT: model.startTick
+                    property int dur: model.duration
+
                     // Block
                     Rectangle {
-                        width: model.duration * root.pixelPerTick
+                        width: dur * root.pixelPerTick
                         height: 40
-                        color: model.color || "#89b4fa" // Fallback
+                        color: root.processColors[model.pid % root.processColors.length]
                         radius: 4
                         border.color: Qt.darker(color, 1.2)
+                        border.width: 1
                         
                         Column {
                             anchors.centerIn: parent
                             Text {
                                 text: "P" + model.pid
                                 font.bold: true
-                                color: "#11111b"
+                                color: "#11111b" // Crust/Mantle dark for contrast
                                 font.pixelSize: 12
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
                             Text {
                                 text: model.duration + "u"
                                 font.pixelSize: 10
+                                font.bold: true
                                 color: "#11111b"
+                                opacity: 0.7
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
                         }
                     }
 
-                    // Ruler Segment
-                    Item {
-                        width: model.duration * root.pixelPerTick
+                    // Ruler Segment (Ticks for every unit)
+                    Row {
+                        width: dur * root.pixelPerTick
                         height: 20
                         
-                        // Start Tick Mark
-                        Rectangle {
-                            width: 1
-                            height: 5
-                            color: root.rulerColor
-                            anchors.left: parent.left
-                            anchors.top: parent.top
-                        }
-                        
-                        // Start Tick Label
-                        Text {
-                            text: model.startTick
-                            color: root.rulerColor
-                            font.pixelSize: 10
-                            anchors.left: parent.left
-                            anchors.top: parent.top
-                            anchors.topMargin: 6
-                            anchors.leftMargin: -width/2 // Center on line
+                        Repeater {
+                            model: dur
+                            
+                            Item {
+                                width: root.pixelPerTick
+                                height: parent.height
+                                
+                                // Tick Mark
+                                Rectangle {
+                                    width: 1
+                                    height: 4
+                                    color: root.rulerColor
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                }
+                                
+                                // Tick Label
+                                Text {
+                                    text: (startT + index)
+                                    color: root.rulerColor
+                                    font.pixelSize: 10
+                                    font.family: "Consolas"
+                                    anchors.left: parent.left
+                                    anchors.top: parent.top
+                                    anchors.topMargin: 6
+                                    anchors.leftMargin: -width/2 + 1 // Center on tick
+                                }
+                            }
                         }
                     }
                 }
