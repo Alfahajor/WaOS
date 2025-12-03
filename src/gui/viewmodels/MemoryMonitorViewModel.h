@@ -14,6 +14,7 @@ class MemoryMonitorViewModel : public QObject {
   Q_PROPERTY(int totalPageFaults READ totalPageFaults NOTIFY totalPageFaultsChanged)
   Q_PROPERTY(int totalReplacements READ totalReplacements NOTIFY totalReplacementsChanged)
   Q_PROPERTY(double hitRatio READ hitRatio NOTIFY hitRatioChanged)
+  Q_PROPERTY(double memoryOccupancy READ memoryOccupancy NOTIFY memoryOccupancyChanged)
 
   // Page Table Support
   Q_PROPERTY(QList<int> processList READ processList NOTIFY processListChanged)
@@ -29,6 +30,7 @@ class MemoryMonitorViewModel : public QObject {
   int totalPageFaults() const { return m_totalPageFaults; }
   int totalReplacements() const { return m_totalReplacements; }
   double hitRatio() const { return m_hitRatio; }
+  double memoryOccupancy() const { return m_memoryOccupancy; }
 
   QList<int> processList() const { return m_processList; }
   int selectedPid() const { return m_selectedPid; }
@@ -44,6 +46,7 @@ class MemoryMonitorViewModel : public QObject {
   void totalPageFaultsChanged();
   void totalReplacementsChanged();
   void hitRatioChanged();
+  void memoryOccupancyChanged();
 
   void processListChanged();
   void selectedPidChanged();
@@ -58,6 +61,7 @@ class MemoryMonitorViewModel : public QObject {
   int m_totalPageFaults = 0;
   int m_totalReplacements = 0;
   double m_hitRatio = 0.0;
+  double m_memoryOccupancy = 0.0;
 
   QList<int> m_processList;
   int m_selectedPid = -1;

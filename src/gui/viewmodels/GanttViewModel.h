@@ -17,6 +17,9 @@ struct GanttBlock {
 class GanttViewModel : public QAbstractListModel {
   Q_OBJECT
   Q_PROPERTY(int totalTicks READ totalTicks NOTIFY totalTicksChanged)
+  Q_PROPERTY(int idleTime READ idleTime NOTIFY idleTimeChanged)
+  Q_PROPERTY(int contextSwitchTime READ contextSwitchTime NOTIFY contextSwitchTimeChanged)
+  Q_PROPERTY(int effectiveTime READ effectiveTime NOTIFY effectiveTimeChanged)
 
  public:
   enum GanttRoles {
@@ -31,6 +34,9 @@ class GanttViewModel : public QAbstractListModel {
 
   void setSimulator(waos::core::Simulator* simulator);
   int totalTicks() const { return m_totalTicks; }
+  int idleTime() const { return m_idleTime; }
+  int contextSwitchTime() const { return m_contextSwitchTime; }
+  int effectiveTime() const { return m_effectiveTime; }
 
   // QAbstractListModel interface
   int rowCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -43,11 +49,17 @@ class GanttViewModel : public QAbstractListModel {
 
  signals:
   void totalTicksChanged();
+  void idleTimeChanged();
+  void contextSwitchTimeChanged();
+  void effectiveTimeChanged();
 
  private:
   waos::core::Simulator* m_simulator = nullptr;
   std::vector<GanttBlock> m_blocks;
   int m_totalTicks = 0;
+  int m_idleTime = 0;
+  int m_contextSwitchTime = 0;
+  int m_effectiveTime = 0;
 
   // State tracking for current block
   int m_currentPid = -3;  // -3: Uninitialized, -2: CS, -1: Idle, >=0: PID

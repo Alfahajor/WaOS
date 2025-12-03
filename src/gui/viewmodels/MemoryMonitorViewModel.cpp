@@ -85,6 +85,15 @@ void MemoryMonitorViewModel::onClockTicked(uint64_t tick) {
     emit hitRatioChanged();
   }
 
+  double occupancy = 0.0;
+  if (stats.totalFrames > 0) {
+    occupancy = (static_cast<double>(stats.usedFrames) / stats.totalFrames) * 100.0;
+  }
+  if (m_memoryOccupancy != occupancy) {
+    m_memoryOccupancy = occupancy;
+    emit memoryOccupancyChanged();
+  }
+
   updatePageTable();
 }
 
@@ -125,6 +134,9 @@ void MemoryMonitorViewModel::reset() {
 
   m_hitRatio = 0.0;
   emit hitRatioChanged();
+
+  m_memoryOccupancy = 0.0;
+  emit memoryOccupancyChanged();
 
   m_processList.clear();
   emit processListChanged();

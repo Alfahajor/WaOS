@@ -46,6 +46,10 @@ SimulationController::SimulationController(QObject* parent)
   }
 
   connect(m_timer, &QTimer::timeout, this, &SimulationController::onTimeout);
+  connect(m_simulator.get(), &waos::core::Simulator::simulationFinished, this, [this]() {
+    stop();
+    emit simulationFinished();
+  });
 }
 
 void SimulationController::start() {

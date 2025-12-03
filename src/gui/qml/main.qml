@@ -645,6 +645,49 @@ ApplicationWindow {
                                         }
                                     }
                                 }
+
+                                // CPU Stats Text (CS / Idle)
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 5
+                                    spacing: 20
+                                    
+                                    Column {
+                                        Layout.fillWidth: true
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Text { 
+                                            text: "Context Switches"
+                                            color: mainWindow.textMuted
+                                            font.pixelSize: 11
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                        Text { 
+                                            text: processViewModel.totalContextSwitches
+                                            color: mainWindow.warningColor // Orange
+                                            font.bold: true
+                                            font.pixelSize: 16
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                    }
+                                    
+                                    Column {
+                                        Layout.fillWidth: true
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Text { 
+                                            text: "Idle Time"
+                                            color: mainWindow.textMuted
+                                            font.pixelSize: 11
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                        Text { 
+                                            text: ganttViewModel.idleTime + " ticks"
+                                            color: "#b2bec3" // Gray
+                                            font.bold: true
+                                            font.pixelSize: 16
+                                            anchors.horizontalCenter: parent.horizontalCenter
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -667,6 +710,19 @@ ApplicationWindow {
         SettingsDialog {
             id: settingsDialog
             anchors.centerIn: parent
+        }
+
+        // Summary Dialog Instance
+        SummaryDialog {
+            id: summaryDialog
+            anchors.centerIn: parent
+        }
+
+        Connections {
+            target: simulationController
+            function onSimulationFinished() {
+                summaryDialog.open()
+            }
         }
     }
 }

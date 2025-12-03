@@ -395,12 +395,23 @@ void Simulator::handleScheduling() {
     return;
   }
 
-  // Initiate Context Switch
-  m_runningProcess = candidate;
-  m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-
-  emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-  log(QString("Planificador seleccionó P%1. Iniciando inmediatamente (Sin sobrecarga de CC)").arg(candidate->getPid()), LogCategory::SCHED);
+  // Initiate Context Switch (Always apply overhead if configured)
+  if (m_contextSwitchDuration > 0) {
+    m_nextProcess = candidate;
+    m_contextSwitchCounter = m_contextSwitchDuration;
+    m_totalContextSwitches++;
+    log(QString("Planificador seleccionó P%1. Iniciando cambio de contexto (%2 ticks).")
+            .arg(candidate->getPid())
+            .arg(m_contextSwitchDuration),
+        LogCategory::SCHED);
+  } else {
+    // Immediate switch only if duration is 0
+    m_runningProcess = candidate;
+    m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+    m_totalContextSwitches++;
+    emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+    log(QString("Planificador seleccionó P%1. Iniciando inmediatamente.").arg(candidate->getPid()), LogCategory::SCHED);
+  }
 }
 
 void Simulator::triggerContextSwitch(Process* current, Process* next) {
@@ -421,12 +432,13 @@ void Simulator::triggerContextSwitch(Process* current, Process* next) {
   if (isPreemption) {
     m_nextProcess = next;
     m_contextSwitchCounter = m_contextSwitchDuration;
-    m_totalContextSwitches++;
+    // m_totalContextSwitches++; // Moved to handleScheduling/dispatch
   } else {
     // Immediate switch for non-preemptive cases
     if (next) {
       m_runningProcess = next;
       m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+      m_totalContextSwitches++;
       emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
     }
     // If next is null, handleScheduling will pick one immediately in step()
@@ -476,6 +488,13 @@ void Simulator::updateMetrics() {
   } else {
     m_metrics.avgWaitTime = 0.0;
     m_metrics.avgTurnaroundTime = 0.0;
+  }
+
+  // Check for simulation completion
+  if (m_isRunning && m_metrics.completedProcesses == m_metrics.totalProcesses && m_metrics.totalProcesses > 0) {
+    stop();
+    emit simulationFinished();
+    log("Todos los procesos han terminado. Simulación finalizada.", LogCategory::SYS);
   }
 }
 

@@ -8,6 +8,7 @@
         <file>ExecutionLog.qml</file>
         <file>GanttChart.qml</file>
         <file>SettingsDialog.qml</file>
+        <file>SummaryDialog.qml</file>
         <file>BlockedProcesses.qml</file>
         <file>CollapsibleSection.qml</file>
         <file>UnlockNotifications.qml</file>

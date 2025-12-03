@@ -43,6 +43,10 @@ void ProcessMonitorViewModel::onClockTicked(uint64_t tick) {
     m_cpuUtilization = metrics.cpuUtilization;
     emit cpuUtilizationChanged();
   }
+  if (m_totalContextSwitches != metrics.totalContextSwitches) {
+    m_totalContextSwitches = metrics.totalContextSwitches;
+    emit totalContextSwitchesChanged();
+  }
 }
 
 void ProcessMonitorViewModel::reset() {
@@ -58,6 +62,9 @@ void ProcessMonitorViewModel::reset() {
 
   m_cpuUtilization = 0.0;
   emit cpuUtilizationChanged();
+
+  m_totalContextSwitches = 0;
+  emit totalContextSwitchesChanged();
 }
 
 }  // namespace waos::gui::viewmodels

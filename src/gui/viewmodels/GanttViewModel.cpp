@@ -91,6 +91,18 @@ void GanttViewModel::onClockTicked(uint64_t tick) {
     m_currentPid = runningPid;
     m_currentBlockStart = tick;
   }
+
+  // Update running totals
+  if (runningPid == -1) {
+    m_idleTime++;
+    emit idleTimeChanged();
+  } else if (runningPid == -2) {
+    m_contextSwitchTime++;
+    emit contextSwitchTimeChanged();
+  } else {
+    m_effectiveTime++;
+    emit effectiveTimeChanged();
+  }
 }
 
 void GanttViewModel::reset() {
@@ -101,6 +113,13 @@ void GanttViewModel::reset() {
   m_currentBlockStart = 0;
   m_totalTicks = 0;
   emit totalTicksChanged();
+
+  m_idleTime = 0;
+  emit idleTimeChanged();
+  m_contextSwitchTime = 0;
+  emit contextSwitchTimeChanged();
+  m_effectiveTime = 0;
+  emit effectiveTimeChanged();
 }
 
 }  // namespace waos::gui::viewmodels

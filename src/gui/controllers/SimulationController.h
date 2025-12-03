@@ -48,6 +48,7 @@ class SimulationController : public QObject {
   void schedulerAlgorithmChanged();
   void memoryAlgorithmChanged();
   void simulationReset();
+  void simulationFinished();
 
  private slots:
   void onTimeout();

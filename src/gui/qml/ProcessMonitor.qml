@@ -239,6 +239,7 @@ Rectangle {
                                 spacing: 4
                                 property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 
                                 property bool isBlocked: model.modelData.state.toString().startsWith("Bloqueado")
+                                property bool isTerminated: model.modelData.state.toString() === "Terminado"
 
                                 Repeater {
                                     model: 10
@@ -246,6 +247,8 @@ Rectangle {
                                         width: 6; height: 6
                                         radius: 3
                                         color: {
+                                            if (parent.isTerminated) return "#333" // All gray if terminated
+                                            
                                             if (index < parent.progress) {
                                                 if (parent.isBlocked) return errorColor
                                                 return accentColor // Blue/Violet
@@ -261,6 +264,7 @@ Rectangle {
                             Text {
                                 text: {
                                     var s = model.modelData.state.toString();
+                                    if (s === "Terminado") return "Done";
                                     if (s.startsWith("Bloqueado")) return "Wait";
                                     return (10 - ((model.modelData.pid + model.modelData.cpuTime) % 10)) + "rem";
                                 }
