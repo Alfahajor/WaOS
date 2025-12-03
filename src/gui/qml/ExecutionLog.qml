@@ -32,79 +32,25 @@ Rectangle {
                 width: ListView.view.width
                 spacing: 4
 
-                // Helper to parse message
-                property var parsed: {
-                    var msg = model.message;
-                    var tag = "INFO";
-                    var content = msg;
-                    
-                    // Try to extract tag [TAG]
-                    var match = msg.match(/^\[(.*?)\]\s*(.*)/);
-                    if (match) {
-                        tag = match[1];
-                        content = match[2];
-                    }
-                    
-                    // Determine color
-                    var color = accentColor;
-                    var checkStr = (tag + " " + content).toLowerCase();
-                    
-                    if (checkStr.includes("mem") || checkStr.includes("fault") || checkStr.includes("alloc")) color = successColor;
-                    else if (checkStr.includes("i/o") || checkStr.includes("wait") || checkStr.includes("block")) color = warnColor;
-                    else if (checkStr.includes("error") || checkStr.includes("fail")) color = errorColor;
-                    
-                    return { tag: tag, content: content, color: color };
-                }
-
-                RowLayout {
+                Text {
                     Layout.fillWidth: true
-                    Layout.topMargin: 6
-                    Layout.bottomMargin: 6
-                    spacing: 10
-
-                    // Time
-                    Text {
-                        text: "00:" + (index % 60 < 10 ? "0" + (index % 60) : (index % 60))
-                        color: "#bbbbbb" // Slightly brighter gray
-                        font.family: "Consolas"
-                        font.pixelSize: 12
-                    }
-
-                    // Tag
-                    Rectangle {
-                        width: tagText.implicitWidth + 12
-                        height: 20
-                        color: parsed.color
-                        radius: 4
-                        opacity: 0.2 // Slightly more visible background
-                        
-                        Text {
-                            id: tagText
-                            anchors.centerIn: parent
-                            text: parsed.tag
-                            color: parsed.color
-                            font.bold: true
-                            font.pixelSize: 11
-                        }
-                    }
-
-                    // Message
-                    Text {
-                        Layout.fillWidth: true
-                        text: parsed.content
-                        color: "#ffffff" // Pure white for better visibility
-                        font.family: "Consolas"
-                        font.pixelSize: 13
-                        font.weight: Font.Medium // Thicker font
-                        wrapMode: Text.Wrap
-                    }
+                    Layout.topMargin: 2
+                    Layout.bottomMargin: 2
+                    Layout.leftMargin: 5
+                    
+                    text: model.message
+                    textFormat: Text.RichText
+                    color: "#cdd6f4"
+                    font.family: "Consolas"
+                    font.pixelSize: 13
+                    wrapMode: Text.Wrap
                 }
 
                 // Separator
                 Rectangle {
                     Layout.fillWidth: true
                     height: 1
-                    color: "#444444" // Slightly lighter separator
+                    color: "#313244" 
                     opacity: 0.5
                 }
             }

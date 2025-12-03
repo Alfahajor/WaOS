@@ -72,11 +72,11 @@ bool Simulator::loadProcesses(const std::string& filePath) {
                 return a->getPid() < b->getPid();
               });
 
-    emit logMessage(QString("Se cargaron %1 procesos desde el archivo.").arg(m_processes.size()));
+    log(QString("Se cargaron %1 procesos desde el archivo.").arg(m_processes.size()), LogCategory::SYS);
     return true;
 
   } catch (const std::exception& e) {
-    emit logMessage(QString("Error al cargar procesos: %1").arg(e.what()));
+    log(QString("Error al cargar procesos: %1").arg(e.what()), LogCategory::SYS);
     return false;
   }
 }
@@ -91,22 +91,22 @@ void Simulator::setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> m
 
 void Simulator::start() {
   if (!m_scheduler || !m_memoryManager) {
-    emit logMessage("Error: Planificador o Gestor de Memoria no inicializado.");
+    log("Error: Planificador o Gestor de Memoria no inicializado.", LogCategory::SYS);
     return;
   }
 
   if (m_processes.empty()) {
-    emit logMessage("Error: No hay procesos cargados.");
+    log("Error: No hay procesos cargados.", LogCategory::SYS);
     return;
   }
 
   m_isRunning = true;
-  emit logMessage("Simulación iniciada.");
+  log("Simulación iniciada.", LogCategory::SYS);
 }
 
 void Simulator::stop() {
   m_isRunning = false;
-  emit logMessage("Simulación detenida.");
+  log("Simulación detenida.", LogCategory::SYS);
 }
 
 void Simulator::reset() {
@@ -139,7 +139,7 @@ void Simulator::reset() {
   m_processes.clear();
   m_incomingProcesses.clear();
 
-  emit logMessage("Simulación reiniciada.");
+  log("Simulación reiniciada.", LogCategory::SYS);
 }
 
 void Simulator::tick(bool force) {
@@ -171,7 +171,7 @@ void Simulator::step() {
       m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
 
       emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-      emit logMessage(QString("Cambio de contexto completado. Ejecutando P%1").arg(m_runningProcess->getPid()));
+      log(QString("Cambio de contexto completado. Ejecutando P%1").arg(m_runningProcess->getPid()), LogCategory::SCHED);
     }
   } else {
     // CPU is free for user process
@@ -212,18 +212,18 @@ void Simulator::handleArrivals() {
       Process* current = (m_runningProcess) ? m_runningProcess : m_nextProcess;
       if (current && p->getPriority() < current->getPriority()) {
         // New process has higher priority (lower value)
-        emit logMessage(QString("Apropiación: P%1 (Prio %2) desplaza a P%3 (Prio %4)")
+        log(QString("Apropiación: P%1 (Prio %2) desplaza a P%3 (Prio %4)")
                             .arg(p->getPid())
                             .arg(p->getPriority())
                             .arg(current->getPid())
-                            .arg(current->getPriority()));
+                            .arg(current->getPriority()), LogCategory::SCHED);
 
         triggerContextSwitch(current, nullptr);  // Put current back to ready
         // The scheduler will pick the new high-priority process in handleScheduling
       }
 
       it = m_incomingProcesses.erase(it);
-      emit logMessage(QString("Proceso P%1 llegó.").arg(p->getPid()));
+      log(QString("Proceso P%1 llegó.").arg(p->getPid()), LogCategory::PROC);
     } else {
       // Como están ordenados, si este no llegó, los siguientes tampoco.
       break;
@@ -267,7 +267,7 @@ void Simulator::handleIO() {
       // We omit it for simplicity, but it follows the same logic as Arrivals.
 
       it = m_blockedQueue.erase(it);
-      emit logMessage(QString("Proceso P%1 terminó E/S.").arg(p->getPid()));
+      log(QString("Proceso P%1 terminó E/S.").arg(p->getPid()), LogCategory::NOTIFY);
     }
   }
 }
@@ -293,7 +293,7 @@ void Simulator::handlePageFaults() {
       emit processStateChanged(info.process->getPid(), ProcessState::READY);
       m_scheduler->addProcess(info.process);
 
-      emit logMessage(QString("Proceso P%1 resolvió Fallo de Página.").arg(info.process->getPid()));
+      log(QString("Proceso P%1 resolvió Fallo de Página.").arg(info.process->getPid()), LogCategory::MEM);
       it = m_memoryWaitQueue.erase(it);
     }
   }
@@ -310,9 +310,9 @@ void Simulator::handleCpuExecution() {
 
   if (result != waos::memory::PageRequestResult::HIT) {
     // Page Fault Exception (either PAGE_FAULT or REPLACEMENT)
-    emit logMessage(QString("Fallo de Página durante ejecución: P%1 necesita Página %2")
+    log(QString("Fallo de Página durante ejecución: P%1 necesita Página %2")
                         .arg(m_runningProcess->getPid())
-                        .arg(pageRequired));
+                        .arg(pageRequired), LogCategory::MEM);
 
     m_runningProcess->incrementPageFaults();
     m_totalPageFaults++;
@@ -352,7 +352,7 @@ void Simulator::handleCpuExecution() {
     if (!m_runningProcess->hasMoreBursts()) {
       m_runningProcess->setState(ProcessState::TERMINATED, m_clock.getTime());
       emit processStateChanged(m_runningProcess->getPid(), ProcessState::TERMINATED);
-      emit logMessage(QString("Proceso P%1 Terminado.").arg(m_runningProcess->getPid()));
+      log(QString("Proceso P%1 Terminado.").arg(m_runningProcess->getPid()), LogCategory::PROC);
 
       // Thread cleanup
       m_runningProcess->stopThread();
@@ -377,7 +377,7 @@ void Simulator::handleCpuExecution() {
 
     // Only apply quantum if scheduler uses time-slicing (timeSlice > 0)
     if (timeSlice > 0 && m_runningProcess->getQuantumUsed() >= timeSlice) {
-      emit logMessage(QString("Quantum expirado para P%1").arg(m_runningProcess->getPid()));
+      log(QString("Quantum expirado para P%1").arg(m_runningProcess->getPid()), LogCategory::SCHED);
       m_runningProcess->incrementPreemptions();
       triggerContextSwitch(m_runningProcess, nullptr);
     }
@@ -389,7 +389,7 @@ void Simulator::handleScheduling() {
   Process* candidate = m_scheduler->getNextProcess();
 
   if (!candidate) {
-    emit logMessage("Advertencia: El planificador devolvió nulo a pesar de reportar procesos listos.");
+    log("Advertencia: El planificador devolvió nulo a pesar de reportar procesos listos.", LogCategory::SYS);
     return;
   }
 
@@ -398,7 +398,7 @@ void Simulator::handleScheduling() {
   m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
 
   emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-  emit logMessage(QString("Planificador seleccionó P%1. Iniciando inmediatamente (Sin sobrecarga de CC)").arg(candidate->getPid()));
+  log(QString("Planificador seleccionó P%1. Iniciando inmediatamente (Sin sobrecarga de CC)").arg(candidate->getPid()), LogCategory::SCHED);
 }
 
 void Simulator::triggerContextSwitch(Process* current, Process* next) {
@@ -549,6 +549,51 @@ waos::common::MemoryStats Simulator::getMemoryStats() const {
   // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
   if (m_memoryManager) return m_memoryManager->getMemoryStats();
   return {};
+}
+
+void Simulator::log(const QString& message, LogCategory category) {
+  uint64_t time = m_clock.getTime();
+  QString timeStr = QString("%1:%2")
+                        .arg(time / 60, 2, 10, QChar('0'))
+                        .arg(time % 60, 2, 10, QChar('0'));
+
+  QString catStr;
+  QString color;
+
+  switch (category) {
+    case LogCategory::SYS:
+      catStr = "SYS";
+      color = "#a6e3a1";  // Green
+      break;
+    case LogCategory::MEM:
+      catStr = "MEM";
+      color = "#89b4fa";  // Blue
+      break;
+    case LogCategory::WAIT:
+      catStr = "WAIT";
+      color = "#fab387";  // Orange
+      break;
+    case LogCategory::NOTIFY:
+      catStr = "NOTIFY";
+      color = "#f9e2af";  // Yellow
+      break;
+    case LogCategory::SCHED:
+      catStr = "SCHED";
+      color = "#cba6f7";  // Purple
+      break;
+    case LogCategory::PROC:
+      catStr = "PROC";
+      color = "#f5c2e7";  // Pink
+      break;
+  }
+
+  QString formattedMessage = QString("<font color='#7f849c'>%1</font> &nbsp; <b><font color='%2'>%3:</font></b> %4")
+                                 .arg(timeStr)
+                                 .arg(color)
+                                 .arg(catStr)
+                                 .arg(message);
+
+  emit logMessage(formattedMessage);
 }
 
 }  // namespace waos::core
