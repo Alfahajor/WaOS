@@ -171,6 +171,7 @@ class Simulator : public QObject {
 
   int m_pageFaultPenalty;
   int m_contextSwitchDuration;
+  bool m_needsContextSwitchOverhead;  // Flag to determine if CS overhead is needed
 
   // The main logic step executed every tick.
   void step();
