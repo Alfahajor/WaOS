@@ -33,6 +33,8 @@ class ProcessItemModel : public QObject {
   Q_PROPERTY(int pageFaults READ pageFaults NOTIFY statsChanged)
   Q_PROPERTY(int preemptions READ preemptions NOTIFY statsChanged)
   Q_PROPERTY(int requiredPages READ requiredPages CONSTANT)
+  Q_PROPERTY(int nextPage READ nextPage NOTIFY statsChanged)
+  Q_PROPERTY(QString referenceString READ referenceString CONSTANT)
 
  public:
   explicit ProcessItemModel(QObject* parent = nullptr);
@@ -49,6 +51,8 @@ class ProcessItemModel : public QObject {
   int pageFaults() const { return m_pageFaults; }
   int preemptions() const { return m_preemptions; }
   int requiredPages() const { return m_requiredPages; }
+  int nextPage() const { return m_nextPage; }
+  QString referenceString() const { return m_referenceString; }
 
   /**
    * @brief Actualiza los datos desde un Process del backend
@@ -73,6 +77,8 @@ class ProcessItemModel : public QObject {
   int m_pageFaults = 0;
   int m_preemptions = 0;
   int m_requiredPages = 0;
+  int m_nextPage = 0;
+  QString m_referenceString;
 
   QString stateToString(waos::core::ProcessState state) const;
 };

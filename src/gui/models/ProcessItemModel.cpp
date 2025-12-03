@@ -56,6 +56,21 @@ void ProcessItemModel::updateFrom(const waos::core::Process* process) {
     statsUpdated = true;
   }
 
+  // Actualizar Next Page
+  int next = process->getCurrentPageRequirement();
+  if (m_nextPage != next) {
+    m_nextPage = next;
+    statsUpdated = true;
+  }
+
+  // Actualizar Reference String (Lazy load)
+  if (m_referenceString.isEmpty()) {
+    const auto& refs = process->getPageReferenceString();
+    QStringList list;
+    for (int p : refs) list << QString::number(p);
+    m_referenceString = list.join(", ");
+  }
+
   if (statsUpdated) {
     emit statsChanged();
   }

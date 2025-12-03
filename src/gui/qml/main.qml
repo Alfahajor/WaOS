@@ -362,6 +362,28 @@ ApplicationWindow {
                                                 }
                                                 color: mainWindow.textColor; font.bold: true 
                                             }
+
+                                            Label { text: "Next Page:"; visible: mainWindow.selectionMode === "process"; color: mainWindow.textMuted }
+                                            Label { 
+                                                visible: mainWindow.selectionMode === "process"
+                                                text: {
+                                                    var p = mainWindow.getSelectedProcess();
+                                                    return p ? p.nextPage : "-";
+                                                }
+                                                color: mainWindow.textColor; font.bold: true 
+                                            }
+
+                                            Label { text: "Ref. String:"; visible: mainWindow.selectionMode === "process"; color: mainWindow.textMuted }
+                                            Label { 
+                                                visible: mainWindow.selectionMode === "process"
+                                                text: {
+                                                    var p = mainWindow.getSelectedProcess();
+                                                    return p ? p.referenceString : "-";
+                                                }
+                                                color: mainWindow.textColor; font.bold: true 
+                                                Layout.fillWidth: true
+                                                elide: Text.ElideRight
+                                            }
                                         }
                                         
                                         Label { 
