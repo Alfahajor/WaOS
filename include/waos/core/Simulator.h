@@ -118,7 +118,12 @@ class Simulator : public QObject {
   void logMessage(QString message);
 
  public:
-  enum class LogCategory { SYS, MEM, WAIT, NOTIFY, SCHED, PROC };
+  enum class LogCategory { SYS,
+                           MEM,
+                           WAIT,
+                           NOTIFY,
+                           SCHED,
+                           PROC };
 
  private:
   void log(const QString& message, LogCategory category = LogCategory::SYS);

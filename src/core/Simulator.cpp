@@ -213,10 +213,11 @@ void Simulator::handleArrivals() {
       if (current && p->getPriority() < current->getPriority()) {
         // New process has higher priority (lower value)
         log(QString("Apropiación: P%1 (Prio %2) desplaza a P%3 (Prio %4)")
-                            .arg(p->getPid())
-                            .arg(p->getPriority())
-                            .arg(current->getPid())
-                            .arg(current->getPriority()), LogCategory::SCHED);
+                .arg(p->getPid())
+                .arg(p->getPriority())
+                .arg(current->getPid())
+                .arg(current->getPriority()),
+            LogCategory::SCHED);
 
         triggerContextSwitch(current, nullptr);  // Put current back to ready
         // The scheduler will pick the new high-priority process in handleScheduling
@@ -311,8 +312,9 @@ void Simulator::handleCpuExecution() {
   if (result != waos::memory::PageRequestResult::HIT) {
     // Page Fault Exception (either PAGE_FAULT or REPLACEMENT)
     log(QString("Fallo de Página durante ejecución: P%1 necesita Página %2")
-                        .arg(m_runningProcess->getPid())
-                        .arg(pageRequired), LogCategory::MEM);
+            .arg(m_runningProcess->getPid())
+            .arg(pageRequired),
+        LogCategory::MEM);
 
     m_runningProcess->incrementPageFaults();
     m_totalPageFaults++;
