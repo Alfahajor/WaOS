@@ -103,7 +103,7 @@ void SimulationController::configure(const QString& scheduler, int quantum, cons
   }
 
   // 2. Configure Memory Manager
-  if (frames <= 0) frames = 16; // Default fallback
+  if (frames <= 0) frames = 16;  // Default fallback
 
   if (memory == "LRU") {
     m_simulator->setMemoryManager(std::make_unique<waos::memory::LRUMemoryManager>(frames, m_simulator->getClockRef()));
