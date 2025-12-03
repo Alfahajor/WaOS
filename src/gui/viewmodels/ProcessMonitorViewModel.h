@@ -27,6 +27,7 @@ class ProcessMonitorViewModel : public QObject {
 
  public slots:
   void onClockTicked(uint64_t tick);
+  void reset();
 
  signals:
   void processListChanged();

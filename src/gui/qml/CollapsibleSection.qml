@@ -26,11 +26,14 @@ ColumnLayout {
             spacing: 10
             
             // Arrow Icon
-            Text {
-                text: root.isExpanded ? "▼" : "▶"
-                color: "#dfe6e9"
-                font.pixelSize: 12
+            Image {
+                source: root.isExpanded ? "qrc:/icons/chevron_down.svg" : "qrc:/icons/chevron_right.svg"
+                sourceSize.width: 16
+                sourceSize.height: 16
                 Layout.alignment: Qt.AlignVCenter
+                
+                // Simple color filter trick if needed, or rely on SVG color
+                // For now, assuming SVG has currentColor or white
             }
             
             // Title

@@ -112,4 +112,29 @@ void MemoryMonitorViewModel::updatePageTable() {
   emit pageTableChanged();
 }
 
+void MemoryMonitorViewModel::reset() {
+  qDeleteAll(m_frameItems);
+  m_frameItems.clear();
+  emit frameListChanged();
+
+  m_totalPageFaults = 0;
+  emit totalPageFaultsChanged();
+
+  m_totalReplacements = 0;
+  emit totalReplacementsChanged();
+
+  m_hitRatio = 0.0;
+  emit hitRatioChanged();
+
+  m_processList.clear();
+  emit processListChanged();
+
+  m_selectedPid = -1;
+  emit selectedPidChanged();
+
+  qDeleteAll(m_pageTableItems);
+  m_pageTableItems.clear();
+  emit pageTableChanged();
+}
+
 }  // namespace waos::gui::viewmodels

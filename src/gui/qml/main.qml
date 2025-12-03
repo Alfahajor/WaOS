@@ -146,10 +146,18 @@ ApplicationWindow {
                                 
                                 // Settings Button
                                 Button {
-                                    text: "⚙️"
-                                    font.pixelSize: 20
-                                    display: AbstractButton.TextOnly
-                                    background: Rectangle { color: "transparent" }
+                                    id: settingsButton
+                                    icon.source: "qrc:/icons/settings.svg"
+                                    icon.color: mainWindow.textColor
+                                    icon.width: 20; icon.height: 20
+                                    display: AbstractButton.IconOnly
+                                    
+                                    background: Rectangle { 
+                                        color: "transparent" 
+                                        radius: 4
+                                        border.color: settingsButton.hovered ? mainWindow.accentColor : "transparent"
+                                    }
+                                    
                                     onClicked: settingsDialog.open()
                                     ToolTip.visible: hovered; ToolTip.text: "Settings"
                                 }
@@ -166,13 +174,26 @@ ApplicationWindow {
 
                                 // Step
                                 Button {
+                                    id: stepButton
                                     icon.source: "qrc:/icons/step.svg"
                                     icon.color: enabled ? mainWindow.textColor : mainWindow.textMuted
                                     display: AbstractButton.IconOnly
-                                    background: Rectangle { color: "transparent" }
+                                    
+                                    background: Rectangle { 
+                                        radius: 4
+                                        color: stepButton.down ? mainWindow.accentColor : 
+                                               (stepButton.hovered ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
+                                        border.color: stepButton.down ? mainWindow.accentColor : "transparent"
+                                        border.width: 1
+                                        
+                                        Behavior on color { ColorAnimation { duration: 50 } }
+                                    }
+
                                     enabled: !simulationController.isRunning
                                     onClicked: simulationController.step()
-                                    ToolTip.visible: hovered; ToolTip.text: "Step"
+                                    
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Step: Execute 1 Tick"
                                 }
 
                                 // Play/Pause
@@ -185,25 +206,6 @@ ApplicationWindow {
                                     onClicked: {
                                         if (simulationController.isRunning) simulationController.stop()
                                         else simulationController.start()
-                                    }
-                                }
-                                
-                                // Speed
-                                Slider {
-                                    from: 100; to: 2000
-                                    value: simulationController.tickInterval
-                                    onMoved: simulationController.tickInterval = value
-                                    Layout.preferredWidth: 80
-                                    background: Rectangle {
-                                        implicitHeight: 4; width: parent.width; height: implicitHeight
-                                        radius: 2; color: mainWindow.bgCard
-                                        Rectangle { width: parent.parent.visualPosition * parent.width; height: parent.height; color: mainWindow.accentColor; radius: 2 }
-                                    }
-                                    handle: Rectangle {
-                                        x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                        y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                        implicitWidth: 12; implicitHeight: 12; radius: 6
-                                        color: mainWindow.accentColor
                                     }
                                 }
                             }

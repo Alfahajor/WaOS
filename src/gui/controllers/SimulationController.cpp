@@ -89,7 +89,7 @@ void SimulationController::step() {
   m_simulator->tick(true);
 }
 
-void SimulationController::configure(const QString& scheduler, int quantum, const QString& memory, const QString& filePath) {
+void SimulationController::configure(const QString& scheduler, int quantum, const QString& memory, int frames, const QString& filePath) {
   // 1. Configure Scheduler
   if (scheduler == "Round Robin") {
     m_simulator->setScheduler(std::make_unique<waos::scheduler::RRScheduler>(quantum));
@@ -103,8 +103,8 @@ void SimulationController::configure(const QString& scheduler, int quantum, cons
   }
 
   // 2. Configure Memory Manager
-  // Default frames = 16 for now
-  int frames = 16;
+  if (frames <= 0) frames = 16;  // Default fallback
+
   if (memory == "LRU") {
     m_simulator->setMemoryManager(std::make_unique<waos::memory::LRUMemoryManager>(frames, m_simulator->getClockRef()));
   } else if (memory == "Optimal") {
@@ -160,12 +160,14 @@ QString SimulationController::memoryAlgorithm() const {
 void SimulationController::registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm) {
   if (vm) {
     vm->setSimulator(m_simulator.get());
+    connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::ProcessMonitorViewModel::reset);
   }
 }
 
 void SimulationController::registerMemoryViewModel(waos::gui::viewmodels::MemoryMonitorViewModel* vm) {
   if (vm) {
     vm->setSimulator(m_simulator.get());
+    connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::MemoryMonitorViewModel::reset);
   }
 }
 

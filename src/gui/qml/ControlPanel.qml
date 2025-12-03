@@ -43,14 +43,14 @@ Rectangle {
                         width: schedulerCombo.width
                         contentItem: Text {
                             text: modelData
-                            color: controlPanel.textColor
+                            color: schedulerCombo.highlightedIndex === index ? "#11111b" : controlPanel.textColor
                             font: schedulerCombo.font
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
                         }
                         background: Rectangle {
                             color: schedulerCombo.highlightedIndex === index ? controlPanel.accentColor : controlPanel.bgInput
-                            opacity: schedulerCombo.highlightedIndex === index ? 0.3 : 1.0
+                            opacity: schedulerCombo.highlightedIndex === index ? 1.0 : 1.0
                         }
                         highlighted: schedulerCombo.highlightedIndex === index
                     }
@@ -148,14 +148,14 @@ Rectangle {
                         width: memoryCombo.width
                         contentItem: Text {
                             text: modelData
-                            color: controlPanel.textColor
+                            color: memoryCombo.highlightedIndex === index ? "#11111b" : controlPanel.textColor
                             font: memoryCombo.font
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
                         }
                         background: Rectangle {
                             color: memoryCombo.highlightedIndex === index ? controlPanel.accentColor : controlPanel.bgInput
-                            opacity: memoryCombo.highlightedIndex === index ? 0.3 : 1.0
+                            opacity: memoryCombo.highlightedIndex === index ? 1.0 : 1.0
                         }
                     }
 
@@ -193,6 +193,37 @@ Rectangle {
                     background: Rectangle {
                         implicitWidth: 120
                         implicitHeight: 40
+                        color: controlPanel.bgInput
+                        border.color: controlPanel.borderColor
+                        radius: 6
+                    }
+                }
+
+                Label { text: "Frames"; color: controlPanel.textColor; font.bold: true }
+                SpinBox {
+                    id: framesSpin
+                    from: 4
+                    to: 128
+                    value: 16
+                    editable: true
+                    Layout.preferredWidth: 100
+                    
+                    contentItem: TextInput {
+                        z: 2
+                        text: framesSpin.textFromValue(framesSpin.value, framesSpin.locale)
+                        font: framesSpin.font
+                        color: controlPanel.textColor
+                        selectionColor: controlPanel.accentColor
+                        selectedTextColor: "#ffffff"
+                        horizontalAlignment: Qt.AlignHCenter
+                        verticalAlignment: Qt.AlignVCenter
+                        readOnly: !framesSpin.editable
+                        validator: framesSpin.validator
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    }
+
+                    background: Rectangle {
+                        implicitWidth: 100
                         color: controlPanel.bgInput
                         border.color: controlPanel.borderColor
                         radius: 6
@@ -278,10 +309,15 @@ Rectangle {
 
                 contentItem: RowLayout {
                     spacing: 5
-                    // We remove the Image here to avoid the black square issue if SVG is bad.
-                    // Just use text for now to ensure it looks clean, or use a simple rectangle indicator.
+                    Image { 
+                        source: "qrc:/icons/check.svg"
+                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        fillMode: Image.PreserveAspectFit
+                        visible: true
+                        // Tinting would require ColorOverlay, assuming SVG is white or colored appropriately
+                    }
                     Text { 
-                        text: "✓ Apply Config"
+                        text: "Apply Config"
                         color: "#11111b" // Dark text on accent
                         font.bold: true
                         Layout.alignment: Qt.AlignCenter
@@ -293,6 +329,7 @@ Rectangle {
                         schedulerCombo.currentText,
                         quantumSpin.value,
                         memoryCombo.currentText,
+                        framesSpin.value,
                         pathField.text
                     )
                 }

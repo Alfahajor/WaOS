@@ -72,11 +72,11 @@ bool Simulator::loadProcesses(const std::string& filePath) {
                 return a->getPid() < b->getPid();
               });
 
-    emit logMessage(QString("Loaded %1 processes from file.").arg(m_processes.size()));
+    emit logMessage(QString("Se cargaron %1 procesos desde el archivo.").arg(m_processes.size()));
     return true;
 
   } catch (const std::exception& e) {
-    emit logMessage(QString("Error loading processes: %1").arg(e.what()));
+    emit logMessage(QString("Error al cargar procesos: %1").arg(e.what()));
     return false;
   }
 }
@@ -91,22 +91,22 @@ void Simulator::setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> m
 
 void Simulator::start() {
   if (!m_scheduler || !m_memoryManager) {
-    emit logMessage("Error: Scheduler or Memory Manager not initialized.");
+    emit logMessage("Error: Planificador o Gestor de Memoria no inicializado.");
     return;
   }
 
   if (m_processes.empty()) {
-    emit logMessage("Error: No processes loaded.");
+    emit logMessage("Error: No hay procesos cargados.");
     return;
   }
 
   m_isRunning = true;
-  emit logMessage("Simulation started.");
+  emit logMessage("Simulación iniciada.");
 }
 
 void Simulator::stop() {
   m_isRunning = false;
-  emit logMessage("Simulation stopped.");
+  emit logMessage("Simulación detenida.");
 }
 
 void Simulator::reset() {
@@ -130,11 +130,16 @@ void Simulator::reset() {
   m_totalContextSwitches = 0;
   m_metrics = waos::common::SimulatorMetrics();
 
+  // Reset Memory Manager
+  if (m_memoryManager) {
+    m_memoryManager->reset();
+  }
+
   // Clear main container (Destructors will run, but threads are already joined)
   m_processes.clear();
   m_incomingProcesses.clear();
 
-  emit logMessage("Simulation reset.");
+  emit logMessage("Simulación reiniciada.");
 }
 
 void Simulator::tick(bool force) {
@@ -166,7 +171,7 @@ void Simulator::step() {
       m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
 
       emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-      emit logMessage(QString("Context Switch complete. Running P%1").arg(m_runningProcess->getPid()));
+      emit logMessage(QString("Cambio de contexto completado. Ejecutando P%1").arg(m_runningProcess->getPid()));
     }
   } else {
     // CPU is free for user process
@@ -207,7 +212,7 @@ void Simulator::handleArrivals() {
       Process* current = (m_runningProcess) ? m_runningProcess : m_nextProcess;
       if (current && p->getPriority() < current->getPriority()) {
         // New process has higher priority (lower value)
-        emit logMessage(QString("Preemption: P%1 (Prio %2) displaces P%3 (Prio %4)")
+        emit logMessage(QString("Apropiación: P%1 (Prio %2) desplaza a P%3 (Prio %4)")
                             .arg(p->getPid())
                             .arg(p->getPriority())
                             .arg(current->getPid())
@@ -218,7 +223,7 @@ void Simulator::handleArrivals() {
       }
 
       it = m_incomingProcesses.erase(it);
-      emit logMessage(QString("Process P%1 arrived.").arg(p->getPid()));
+      emit logMessage(QString("Proceso P%1 llegó.").arg(p->getPid()));
     } else {
       // Como están ordenados, si este no llegó, los siguientes tampoco.
       break;
@@ -262,7 +267,7 @@ void Simulator::handleIO() {
       // We omit it for simplicity, but it follows the same logic as Arrivals.
 
       it = m_blockedQueue.erase(it);
-      emit logMessage(QString("Process P%1 finished I/O.").arg(p->getPid()));
+      emit logMessage(QString("Proceso P%1 terminó E/S.").arg(p->getPid()));
     }
   }
 }
@@ -288,7 +293,7 @@ void Simulator::handlePageFaults() {
       emit processStateChanged(info.process->getPid(), ProcessState::READY);
       m_scheduler->addProcess(info.process);
 
-      emit logMessage(QString("Process P%1 resolved Page Fault.").arg(info.process->getPid()));
+      emit logMessage(QString("Proceso P%1 resolvió Fallo de Página.").arg(info.process->getPid()));
       it = m_memoryWaitQueue.erase(it);
     }
   }
@@ -305,7 +310,7 @@ void Simulator::handleCpuExecution() {
 
   if (result != waos::memory::PageRequestResult::HIT) {
     // Page Fault Exception (either PAGE_FAULT or REPLACEMENT)
-    emit logMessage(QString("Page Fault during exec: P%1 needs Page %2")
+    emit logMessage(QString("Fallo de Página durante ejecución: P%1 necesita Página %2")
                         .arg(m_runningProcess->getPid())
                         .arg(pageRequired));
 
@@ -347,7 +352,7 @@ void Simulator::handleCpuExecution() {
     if (!m_runningProcess->hasMoreBursts()) {
       m_runningProcess->setState(ProcessState::TERMINATED, m_clock.getTime());
       emit processStateChanged(m_runningProcess->getPid(), ProcessState::TERMINATED);
-      emit logMessage(QString("Process P%1 Terminated.").arg(m_runningProcess->getPid()));
+      emit logMessage(QString("Proceso P%1 Terminado.").arg(m_runningProcess->getPid()));
 
       // Thread cleanup
       m_runningProcess->stopThread();
@@ -372,7 +377,7 @@ void Simulator::handleCpuExecution() {
 
     // Only apply quantum if scheduler uses time-slicing (timeSlice > 0)
     if (timeSlice > 0 && m_runningProcess->getQuantumUsed() >= timeSlice) {
-      emit logMessage(QString("Quantum expired for P%1").arg(m_runningProcess->getPid()));
+      emit logMessage(QString("Quantum expirado para P%1").arg(m_runningProcess->getPid()));
       m_runningProcess->incrementPreemptions();
       triggerContextSwitch(m_runningProcess, nullptr);
     }
@@ -384,7 +389,7 @@ void Simulator::handleScheduling() {
   Process* candidate = m_scheduler->getNextProcess();
 
   if (!candidate) {
-    emit logMessage("Warning: Scheduler returned null despite reporting ready processes.");
+    emit logMessage("Advertencia: El planificador devolvió nulo a pesar de reportar procesos listos.");
     return;
   }
 
@@ -393,7 +398,7 @@ void Simulator::handleScheduling() {
   m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
 
   emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-  emit logMessage(QString("Scheduler selected P%1. Starting immediately (No CS overhead)").arg(candidate->getPid()));
+  emit logMessage(QString("Planificador seleccionó P%1. Iniciando inmediatamente (Sin sobrecarga de CC)").arg(candidate->getPid()));
 }
 
 void Simulator::triggerContextSwitch(Process* current, Process* next) {
