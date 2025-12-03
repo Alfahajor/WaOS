@@ -30,6 +30,11 @@ class Clock {
   void tick();
 
   /**
+   * @brief Resets the simulation time to 0.
+   */
+  void reset();
+
+  /**
    * @brief Gets the current simulation time.
    * @return The current number of ticks since the simulation started.
    */

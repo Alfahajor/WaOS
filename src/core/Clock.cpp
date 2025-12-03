@@ -10,6 +10,10 @@ void Clock::tick() {
   ++m_currentTime;
 }
 
+void Clock::reset() {
+  m_currentTime = 0;
+}
+
 uint64_t Clock::getTime() const {
   return m_currentTime;
 }

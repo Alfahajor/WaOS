@@ -135,6 +135,9 @@ void Simulator::reset() {
     m_memoryManager->reset();
   }
 
+  // Reset Clock
+  m_clock.reset();
+
   // Clear main container (Destructors will run, but threads are already joined)
   m_processes.clear();
   m_incomingProcesses.clear();
