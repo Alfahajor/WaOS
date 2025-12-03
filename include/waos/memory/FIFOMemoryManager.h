@@ -58,6 +58,7 @@ namespace waos::memory {
     
     // Statistics
     waos::common::MemoryStats m_stats;
+    uint64_t m_totalHits = 0;  // Counter for page hits
 
     /**
      * @brief Finds a free frame in physical memory.

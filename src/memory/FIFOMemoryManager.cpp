@@ -38,6 +38,7 @@ PageRequestResult FIFOMemoryManager::requestPage(int processId, int pageNumber) 
   if (it != m_pageTables.end()) {
     auto pageIt = it->second.find(pageNumber);
     if (pageIt != it->second.end() && pageIt->second.isLoaded()) {
+      m_totalHits++;  // Count the hit
       return PageRequestResult::HIT;
     }
   }
@@ -154,7 +155,10 @@ std::vector<waos::common::PageTableEntryInfo> FIFOMemoryManager::getPageTableFor
 
 waos::common::MemoryStats FIFOMemoryManager::getMemoryStats() const {
   std::lock_guard<std::mutex> lock(m_mutex);
-  return m_stats;
+  waos::common::MemoryStats currentStats = m_stats;
+  uint64_t totalAccesses = m_stats.totalPageFaults + m_totalHits;
+  currentStats.hitRatio = (totalAccesses > 0) ? (double)m_totalHits / totalAccesses * 100.0 : 0.0;
+  return currentStats;
 }
 
 std::string FIFOMemoryManager::getAlgorithmName() const {

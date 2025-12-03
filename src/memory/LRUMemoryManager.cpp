@@ -151,7 +151,7 @@ namespace waos::memory {
     // Calcular Hit Ratio al vuelo
     waos::common::MemoryStats currentStats = m_stats;
     uint64_t totalAccesses = m_stats.totalPageFaults + m_totalHits;
-    currentStats.hitRatio = (totalAccesses > 0) ? (double)m_totalHits / totalAccesses : 0.0;
+    currentStats.hitRatio = (totalAccesses > 0) ? (double)m_totalHits / totalAccesses * 100.0 : 0.0;
     return currentStats;
   }
 

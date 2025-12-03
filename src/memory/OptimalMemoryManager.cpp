@@ -163,7 +163,7 @@ namespace waos::memory {
     std::lock_guard<std::mutex> lock(m_mutex);
     waos::common::MemoryStats currentStats = m_stats;
     uint64_t totalAccesses = m_stats.totalPageFaults + m_totalHits;
-    currentStats.hitRatio = (totalAccesses > 0) ? (double)m_totalHits / totalAccesses : 0.0;
+    currentStats.hitRatio = (totalAccesses > 0) ? (double)m_totalHits / totalAccesses * 100.0 : 0.0;
     return currentStats;
   }
 
