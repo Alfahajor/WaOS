@@ -208,25 +208,6 @@ ApplicationWindow {
                                         else simulationController.start()
                                     }
                                 }
-                                
-                                // Speed
-                                Slider {
-                                    from: 100; to: 2000
-                                    value: simulationController.tickInterval
-                                    onMoved: simulationController.tickInterval = value
-                                    Layout.preferredWidth: 80
-                                    background: Rectangle {
-                                        implicitHeight: 4; width: parent.width; height: implicitHeight
-                                        radius: 2; color: mainWindow.bgCard
-                                        Rectangle { width: parent.parent.visualPosition * parent.width; height: parent.height; color: mainWindow.accentColor; radius: 2 }
-                                    }
-                                    handle: Rectangle {
-                                        x: parent.leftPadding + parent.visualPosition * (parent.availableWidth - width)
-                                        y: parent.topPadding + parent.availableHeight / 2 - height / 2
-                                        implicitWidth: 12; implicitHeight: 12; radius: 6
-                                        color: mainWindow.accentColor
-                                    }
-                                }
                             }
                         }
                     }

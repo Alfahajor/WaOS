@@ -43,14 +43,14 @@ Rectangle {
                         width: schedulerCombo.width
                         contentItem: Text {
                             text: modelData
-                            color: controlPanel.textColor
+                            color: schedulerCombo.highlightedIndex === index ? "#11111b" : controlPanel.textColor
                             font: schedulerCombo.font
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
                         }
                         background: Rectangle {
                             color: schedulerCombo.highlightedIndex === index ? controlPanel.accentColor : controlPanel.bgInput
-                            opacity: schedulerCombo.highlightedIndex === index ? 0.3 : 1.0
+                            opacity: schedulerCombo.highlightedIndex === index ? 1.0 : 1.0
                         }
                         highlighted: schedulerCombo.highlightedIndex === index
                     }
@@ -148,14 +148,14 @@ Rectangle {
                         width: memoryCombo.width
                         contentItem: Text {
                             text: modelData
-                            color: controlPanel.textColor
+                            color: memoryCombo.highlightedIndex === index ? "#11111b" : controlPanel.textColor
                             font: memoryCombo.font
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
                         }
                         background: Rectangle {
                             color: memoryCombo.highlightedIndex === index ? controlPanel.accentColor : controlPanel.bgInput
-                            opacity: memoryCombo.highlightedIndex === index ? 0.3 : 1.0
+                            opacity: memoryCombo.highlightedIndex === index ? 1.0 : 1.0
                         }
                     }
 

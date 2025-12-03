@@ -63,14 +63,14 @@ Dialog {
                     width: schedulerCombo.width
                     contentItem: Text {
                         text: modelData
-                        color: textColor
+                        color: schedulerCombo.highlightedIndex === index ? "#11111b" : textColor
                         font: schedulerCombo.font
                         elide: Text.ElideRight
                         verticalAlignment: Text.AlignVCenter
                     }
                     background: Rectangle {
                         color: schedulerCombo.highlightedIndex === index ? accentColor : bgInput
-                        opacity: schedulerCombo.highlightedIndex === index ? 0.3 : 1.0
+                        opacity: schedulerCombo.highlightedIndex === index ? 1.0 : 1.0
                     }
                     highlighted: schedulerCombo.highlightedIndex === index
                 }
@@ -151,14 +151,14 @@ Dialog {
                         width: memoryCombo.width
                         contentItem: Text {
                             text: modelData
-                            color: textColor
+                            color: memoryCombo.highlightedIndex === index ? "#11111b" : textColor
                             font: memoryCombo.font
                             elide: Text.ElideRight
                             verticalAlignment: Text.AlignVCenter
                         }
                         background: Rectangle {
                             color: memoryCombo.highlightedIndex === index ? accentColor : bgInput
-                            opacity: memoryCombo.highlightedIndex === index ? 0.3 : 1.0
+                            opacity: memoryCombo.highlightedIndex === index ? 1.0 : 1.0
                         }
                     }
 
