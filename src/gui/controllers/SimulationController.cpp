@@ -160,12 +160,14 @@ QString SimulationController::memoryAlgorithm() const {
 void SimulationController::registerProcessViewModel(waos::gui::viewmodels::ProcessMonitorViewModel* vm) {
   if (vm) {
     vm->setSimulator(m_simulator.get());
+    connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::ProcessMonitorViewModel::reset);
   }
 }
 
 void SimulationController::registerMemoryViewModel(waos::gui::viewmodels::MemoryMonitorViewModel* vm) {
   if (vm) {
     vm->setSimulator(m_simulator.get());
+    connect(this, &SimulationController::simulationReset, vm, &waos::gui::viewmodels::MemoryMonitorViewModel::reset);
   }
 }
 

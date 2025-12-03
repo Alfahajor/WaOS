@@ -130,6 +130,11 @@ void Simulator::reset() {
   m_totalContextSwitches = 0;
   m_metrics = waos::common::SimulatorMetrics();
 
+  // Reset Memory Manager
+  if (m_memoryManager) {
+    m_memoryManager->reset();
+  }
+
   // Clear main container (Destructors will run, but threads are already joined)
   m_processes.clear();
   m_incomingProcesses.clear();

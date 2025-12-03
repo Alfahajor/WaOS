@@ -41,6 +41,7 @@ namespace waos::memory {
     std::vector<waos::common::PageTableEntryInfo> getPageTableForProcess(int processId) const override;
     waos::common::MemoryStats getMemoryStats() const override;
     std::string getAlgorithmName() const override;
+    void reset() override;
 
   private:
     mutable std::mutex m_mutex;

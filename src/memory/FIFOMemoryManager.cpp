@@ -165,6 +165,30 @@ std::string FIFOMemoryManager::getAlgorithmName() const {
   return "FIFO (First-In, First-Out)";
 }
 
+void FIFOMemoryManager::reset() {
+  std::lock_guard<std::mutex> lock(m_mutex);
+
+  // Clear frames
+  for (auto& frame : m_frames) {
+    frame.reset();
+  }
+
+  // Clear page tables
+  m_pageTables.clear();
+
+  // Clear FIFO queue
+  std::queue<std::pair<int, int>> empty;
+  std::swap(m_loadQueue, empty);
+
+  // Reset stats
+  m_stats.usedFrames = 0;
+  m_stats.totalPageFaults = 0;
+  m_stats.totalReplacements = 0;
+  m_stats.hitRatio = 0.0;
+  m_stats.faultsPerProcess.clear();
+  m_totalHits = 0;
+}
+
 int FIFOMemoryManager::findFreeFrame() const {
   for (size_t i = 0; i < m_frames.size(); ++i) {
     if (m_frames[i].isFree()) return static_cast<int>(i);

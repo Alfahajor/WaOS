@@ -110,6 +110,12 @@ namespace waos::memory {
      * @brief Obtiene el nombre del algoritmo (ej: "LRU", "FIFO").
      */
     virtual std::string getAlgorithmName() const = 0;
+
+    /**
+     * @brief Resets the memory manager state.
+     * Clears all frames, page tables, and statistics.
+     */
+    virtual void reset() = 0;
   };
 
 }

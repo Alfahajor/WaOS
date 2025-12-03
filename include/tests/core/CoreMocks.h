@@ -75,6 +75,7 @@ public:
 
   PageRequestResult requestPage(int pid, int page) override {
     requestCount++;
+    if (everythingLoaded) return PageRequestResult::HIT;
     // En simulación real, esto iniciaría reemplazo.
     // Aquí simulamos fallo siempre a menos que se fuerce carga externa.
     return PageRequestResult::PAGE_FAULT;
@@ -104,4 +105,10 @@ public:
   }
 
   std::string getAlgorithmName() const override { return "MockMemory"; }
+
+  void reset() override {
+    memoryState.clear();
+    requestCount = 0;
+    everythingLoaded = false;
+  }
 };

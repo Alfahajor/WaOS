@@ -45,4 +45,19 @@ void ProcessMonitorViewModel::onClockTicked(uint64_t tick) {
   }
 }
 
+void ProcessMonitorViewModel::reset() {
+  qDeleteAll(m_processItems);
+  m_processItems.clear();
+  emit processListChanged();
+
+  m_avgWaitTime = 0.0;
+  emit avgWaitTimeChanged();
+
+  m_avgTurnaroundTime = 0.0;
+  emit avgTurnaroundTimeChanged();
+
+  m_cpuUtilization = 0.0;
+  emit cpuUtilizationChanged();
+}
+
 }  // namespace waos::gui::viewmodels

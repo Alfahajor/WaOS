@@ -24,8 +24,9 @@ class MockMemoryManager : public waos::memory::IMemoryManager {
   std::vector<waos::common::FrameInfo> getFrameStatus() const;
   std::vector<waos::common::PageTableEntryInfo> getPageTableForProcess(int processId) const;
   int getTotalFrames() const;
-  waos::common::MemoryStats getMemoryStats() const;
-  std::string getAlgorithmName() const;
+  waos::common::MemoryStats getMemoryStats() const override;
+  std::string getAlgorithmName() const override;
+  void reset() override;
 
  private:
   int m_totalFrames = 64;

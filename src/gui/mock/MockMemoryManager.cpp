@@ -38,4 +38,8 @@ std::string MockMemoryManager::getAlgorithmName() const {
   return "Mock Memory (LRU)";
 }
 
+void MockMemoryManager::reset() {
+  // No-op for mock
+}
+
 }  // namespace waos::gui::mock
