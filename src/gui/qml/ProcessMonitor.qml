@@ -11,9 +11,10 @@ Rectangle {
     property color successColor: "#00b894" // Green
     property color errorColor: "#d63031"   // Red
     property color warningColor: "#fdcb6e" // Orange
-    property color bgRowOdd: "#1e1e24"
-    property color bgRowEven: "#121216"
+    property color bgRowOdd: "transparent" // No alternating background
+    property color bgRowEven: "transparent"
     property color borderColor: "#2d3436"
+    property color bgCard: "#1e1e24" // Lighter for metrics
     
     ColumnLayout {
         anchors.fill: parent
@@ -23,31 +24,31 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             Label {
-                text: "Process Monitor"
+                text: "PROCESS CONTROL BLOCK"
                 font.bold: true
-                font.pixelSize: 20
-                color: textColor
+                font.pixelSize: 14
+                color: "#636e72"
                 font.family: "Segoe UI"
             }
             
-            // Algorithm Badge
+            Item { Layout.fillWidth: true }
+
+            // Algorithm Badge (Dynamic Strategy)
             Rectangle {
-                width: 100; height: 24
-                radius: 12
-                color: "transparent"
+                width: 80; height: 24
+                radius: 4
+                color: Qt.rgba(108/255, 92/255, 231/255, 0.2)
                 border.color: accentColor
                 border.width: 1
                 
                 Text {
                     anchors.centerIn: parent
-                    text: "Round Robin" // Placeholder
+                    text: "RR (Q=2)" // Mock dynamic strategy
                     color: accentColor
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     font.bold: true
                 }
             }
-            
-            Item { Layout.fillWidth: true }
         }
 
         // Metrics Cards
@@ -56,39 +57,36 @@ Rectangle {
             
             Repeater {
                 model: [
-                    { label: "Avg Wait", value: processViewModel.avgWaitTime.toFixed(2) + " ms", icon: "⏱️" },
-                    { label: "Avg Turnaround", value: processViewModel.avgTurnaroundTime.toFixed(2) + " ms", icon: "🔄" },
-                    { label: "CPU Util", value: processViewModel.cpuUtilization.toFixed(1) + "%", icon: "💻" }
+                    { label: "AVG WAIT TIME", value: processViewModel.avgWaitTime.toFixed(1) + " ms" },
+                    { label: "AVG TURNAROUND", value: processViewModel.avgTurnaroundTime.toFixed(1) + " ms" },
+                    { label: "THROUGHPUT", value: "0.4 p/ms" }, // Mock
+                    { label: "ACTIVE PROCS", value: processViewModel.processList.length }
                 ]
                 
                 Rectangle {
-                    width: 180; height: 80
-                    color: bgRowOdd
-                    radius: 12
+                    Layout.fillWidth: true
+                    height: 60
+                    color: bgCard // Lighter background
+                    radius: 4
                     border.color: borderColor
                     border.width: 1
                     
-                    RowLayout {
+                    ColumnLayout {
                         anchors.fill: parent
-                        anchors.margins: 15
-                        spacing: 15
+                        anchors.margins: 10
+                        spacing: 2
                         
-                        // Icon Bubble
-                        Rectangle {
-                            width: 40; height: 40
-                            radius: 20
-                            color: Qt.lighter(bgRowOdd, 1.5)
-                            Text {
-                                anchors.centerIn: parent
-                                text: modelData.icon
-                                font.pixelSize: 20
-                            }
+                        Text { 
+                            text: modelData.label
+                            color: "#636e72"
+                            font.pixelSize: 10
+                            font.bold: true
                         }
-                        
-                        Column {
-                            Layout.fillWidth: true
-                            Text { text: modelData.label; color: "#b2bec3"; font.pixelSize: 12; font.bold: true }
-                            Text { text: modelData.value; color: textColor; font.bold: true; font.pixelSize: 20 }
+                        Text { 
+                            text: modelData.value
+                            color: textColor
+                            font.bold: true
+                            font.pixelSize: 16
                         }
                     }
                 }
@@ -98,42 +96,44 @@ Rectangle {
         // Header
         Rectangle {
             Layout.fillWidth: true
-            height: 40
+            height: 30
             color: "transparent"
             
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 15
-                anchors.rightMargin: 15
-                spacing: 10
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                spacing: 0 // Using Layout.preferredWidth for distribution
                 
-                Label { text: "PID"; Layout.preferredWidth: 60; font.bold: true; color: "#636e72" }
-                Label { text: "STATE"; Layout.preferredWidth: 130; font.bold: true; color: "#636e72" }
-                Label { text: "PRI"; Layout.preferredWidth: 50; font.bold: true; color: "#636e72" }
-                Label { text: "WAIT"; Layout.preferredWidth: 60; font.bold: true; color: "#636e72" }
-                Label { text: "CPU"; Layout.preferredWidth: 60; font.bold: true; color: "#636e72" }
-                Label { text: "BURST PROGRESS"; Layout.fillWidth: true; font.bold: true; color: "#636e72" }
+                Label { text: "PID"; Layout.preferredWidth: 60; font.bold: true; color: textColor }
+                Label { text: "State"; Layout.preferredWidth: 120; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter }
+                Label { text: "Pri"; Layout.preferredWidth: 60; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter }
+                Label { text: "Arr"; Layout.preferredWidth: 60; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter } // Added Arrival
+                Label { text: "Wait"; Layout.preferredWidth: 60; font.bold: true; color: textColor; horizontalAlignment: Text.AlignHCenter }
+                Label { text: "Burst (Dots)"; Layout.fillWidth: true; font.bold: true; color: textColor }
             }
         }
+
+        // Divider
+        Rectangle { Layout.fillWidth: true; height: 1; color: borderColor }
 
         ListView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             model: processViewModel.processList
-            spacing: 8
+            spacing: 0 // No spacing, just dividers
 
-            delegate: Rectangle {
+            delegate: Item {
                 width: parent.width
                 height: 50
-                color: {
-                    if (mainWindow.selectedPid === model.modelData.pid) {
-                        return "#2d3436" // Highlight selected
-                    }
-                    return index % 2 == 0 ? bgRowEven : bgRowOdd
-                }
-                radius: 8
                 
+                // Selection Background (Subtle)
+                Rectangle {
+                    anchors.fill: parent
+                    color: (mainWindow.selectedPid === model.modelData.pid) ? Qt.rgba(108/255, 92/255, 231/255, 0.05) : "transparent"
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
@@ -144,102 +144,126 @@ Rectangle {
 
                 // Selection Indicator Strip
                 Rectangle {
-                    width: 4
-                    height: 30
+                    width: 2
+                    height: parent.height
                     anchors.left: parent.left
-                    anchors.leftMargin: 4
-                    anchors.verticalCenter: parent.verticalCenter
-                    radius: 2
                     color: accentColor
                     visible: mainWindow.selectedPid === model.modelData.pid
                 }
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 15
-                    anchors.rightMargin: 15
-                    spacing: 10
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    spacing: 0
                     
                     // PID
                     Label { 
-                        text: "#" + model.modelData.pid
+                        text: "P" + model.modelData.pid
                         Layout.preferredWidth: 60
                         color: textColor
-                        font.bold: true 
-                        font.family: "Consolas"
+                        font.pixelSize: 14
                     }
                     
-                    // State Badge
-                    Rectangle {
-                        Layout.preferredWidth: 130
-                        height: 26
-                        radius: 6
+                    // State Badge (Centered)
+                    Item {
+                        Layout.preferredWidth: 120
+                        Layout.fillHeight: true
                         
-                        property color stateColor: {
-                             var s = model.modelData.state.toString();
-                             if (s === "Ejecutando") return successColor;
-                             if (s === "Listo") return warningColor;
-                             if (s.startsWith("Bloqueado")) return errorColor;
-                             return "#b2bec3";
-                        }
-
-                        color: Qt.rgba(stateColor.r, stateColor.g, stateColor.b, 0.15)
-                        border.color: Qt.rgba(stateColor.r, stateColor.g, stateColor.b, 0.3)
-                        border.width: 1
-                        
-                        Text {
+                        Rectangle {
                             anchors.centerIn: parent
-                            text: model.modelData.state
-                            color: parent.stateColor
-                            font.bold: true
-                            font.pixelSize: 11
-                            font.capitalization: Font.AllUppercase
-                            elide: Text.ElideRight
-                            width: parent.width - 10
-                            horizontalAlignment: Text.AlignHCenter
+                            // width moved to bottom
+                            height: 22
+                            radius: 4
+                            
+                            property color stateColor: {
+                                 var s = model.modelData.state.toString();
+                                 if (s === "Ejecutando") return successColor;
+                                 if (s === "Listo") return warningColor;
+                                 if (s.startsWith("Bloqueado")) return errorColor;
+                                 return "#b2bec3";
+                            }
+                            
+                            // Solid background for badge as per image reference (dark text on colored bg)
+                            // OR colored text on dark bg. Reference shows: Green BG with Dark Text for Running?
+                            // Actually reference shows: Green Text on Dark Green BG.
+                            color: Qt.rgba(stateColor.r, stateColor.g, stateColor.b, 0.15)
+                            
+                            Text {
+                                id: stateText
+                                anchors.centerIn: parent
+                                text: {
+                                    var s = model.modelData.state.toString();
+                                    if (s === "Ejecutando") return "RUNNING";
+                                    if (s === "Listo") return "READY";
+                                    if (s.startsWith("Bloqueado")) return "BLOCKED";
+                                    return s.toUpperCase();
+                                }
+                                color: parent.stateColor
+                                font.bold: true
+                                font.pixelSize: 11
+                            }
+                            
+                            width: stateText.implicitWidth + 16 // Adaptive width defined after Text
                         }
                     }
                     
-                    Label { text: model.modelData.priority; Layout.preferredWidth: 50; color: textColor; horizontalAlignment: Text.AlignHCenter }
-                    Label { text: model.modelData.waitTime + "ms"; Layout.preferredWidth: 60; color: "#b2bec3"; font.family: "Consolas" }
-                    Label { text: model.modelData.cpuTime + "ms"; Layout.preferredWidth: 60; color: "#b2bec3"; font.family: "Consolas" }
+                    Label { text: model.modelData.priority; Layout.preferredWidth: 60; color: textColor; horizontalAlignment: Text.AlignHCenter }
+                    Label { text: "0"; Layout.preferredWidth: 60; color: textColor; horizontalAlignment: Text.AlignHCenter } // Mock Arrival
+                    Label { text: model.modelData.waitTime; Layout.preferredWidth: 60; color: textColor; horizontalAlignment: Text.AlignHCenter }
                     
-                    // Burst Progress (Glow Dots)
-                    Row {
+                    // Burst Progress (Dots + Text)
+                    RowLayout {
                         Layout.fillWidth: true
-                        height: 12
-                        spacing: 6
+                        spacing: 10
                         
-                        property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 
-                        property bool isBlocked: model.modelData.state.toString().startsWith("Bloqueado")
+                        // Dots
+                        Row {
+                            spacing: 4
+                            property int progress: (model.modelData.pid + model.modelData.cpuTime) % 10 + 1 
+                            property bool isBlocked: model.modelData.state.toString().startsWith("Bloqueado")
 
-                        Repeater {
-                            model: 10
-                            Rectangle {
-                                width: 8; height: 8
-                                radius: 4
-                                color: {
-                                    if (index < parent.progress) {
-                                        if (parent.isBlocked) return errorColor
-                                        return accentColor
-                                    } else {
-                                        return "#2d3436"
-                                    }
-                                }
-                                
-                                border.color: (index < parent.progress) ? Qt.lighter(color, 1.5) : "transparent"
-                                border.width: (index < parent.progress) ? 1 : 0
-                                
+                            Repeater {
+                                model: 10
                                 Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 2; height: 2; radius: 1
-                                    color: "#fff"
-                                    visible: index < parent.progress
-                                    opacity: 0.5
+                                    width: 6; height: 6
+                                    radius: 3
+                                    color: {
+                                        if (index < parent.progress) {
+                                            if (parent.isBlocked) return errorColor
+                                            return accentColor // Blue/Violet
+                                        } else {
+                                            return "#333" // Dark Gray
+                                        }
+                                    }
                                 }
                             }
                         }
+                        
+                        // Text Indicator
+                        Text {
+                            text: {
+                                var s = model.modelData.state.toString();
+                                if (s.startsWith("Bloqueado")) return "Wait";
+                                return (10 - ((model.modelData.pid + model.modelData.cpuTime) % 10)) + "rem";
+                            }
+                            color: {
+                                var s = model.modelData.state.toString();
+                                if (s.startsWith("Bloqueado")) return errorColor;
+                                return "#636e72";
+                            }
+                            font.pixelSize: 11
+                        }
                     }
+                }
+                
+                // Bottom Divider
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    anchors.bottom: parent.bottom
+                    color: borderColor
+                    opacity: 0.5
                 }
             }
         }

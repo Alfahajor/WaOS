@@ -11,17 +11,19 @@ ApplicationWindow {
     title: "WaOS - Simulator"
     color: "#11111b" // Background Dark
 
-    // --- Theme Palette (Dracula/Catppuccin inspired) ---
-    property color bgDark: "#11111b"
-    property color bgSurface: "#1e1e2e"
-    property color bgCard: "#252535"
-    property color accentColor: "#89b4fa" // Blue
-    property color accentSecondary: "#cba6f7" // Purple
-    property color successColor: "#a6e3a1"
-    property color errorColor: "#f38ba8"
-    property color textColor: "#cdd6f4"
-    property color textMuted: "#a6adc8"
-    property color borderColor: "#313244"
+    // --- Theme Palette (WaOS Theme) ---
+    property color bgDark: "#121216"
+    property color bgSurface: "#121216" // Same as bgDark for seamless look
+    property color bgLighter: "#1e1e24" // For Header and Cards
+    property color bgCard: "#1e1e24"    // Deprecated alias, pointing to Lighter
+    property color accentColor: "#6c5ce7" // Violet
+    property color accentSecondary: "#a29bfe" // Light Violet
+    property color successColor: "#00b894" // Green
+    property color errorColor: "#d63031" // Red
+    property color warningColor: "#fdcb6e" // Yellow
+    property color textColor: "#dfe6e9"
+    property color textMuted: "#636e72"
+    property color borderColor: "#2d3436"
 
     // Selected IDs (Persistent across ticks)
     property int selectedPid: -1
@@ -70,15 +72,11 @@ ApplicationWindow {
             spacing: 15
             
             // --- Header Section ---
-            ColumnLayout {
+            Rectangle {
                 Layout.fillWidth: true
-                spacing: 10
-
-                // Header Moderno
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 50
-                    color: "transparent"
+                height: 60
+                color: mainWindow.bgLighter // Lighter background for Header
+                radius: 8
                     
                     RowLayout {
                         anchors.fill: parent
@@ -212,9 +210,6 @@ ApplicationWindow {
                         }
                     }
                 }
-
-
-            }
             
             // --- Main Content (SplitView) ---
             SplitView {
