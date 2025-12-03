@@ -27,7 +27,9 @@ QVariant GanttViewModel::data(const QModelIndex& index, int role) const {
 
   switch (role) {
     case PidRole:
-      return block.pid;
+      if (block.pid == -1) return "IDLE";
+      if (block.pid == -2) return "CS";
+      return QString::number(block.pid);
     case StartTickRole:
       return static_cast<qulonglong>(block.startTick);
     case EndTickRole:
@@ -35,6 +37,8 @@ QVariant GanttViewModel::data(const QModelIndex& index, int role) const {
     case DurationRole:
       return static_cast<int>(block.endTick - block.startTick);
     case ColorRole: {
+      if (block.pid == -1) return QColor("#181825");  // IDLE
+      if (block.pid == -2) return QColor("#45475a");  // CS
       // Generate a consistent color based on PID
       int hue = (block.pid * 137) % 360;
       return QColor::fromHsl(hue, 200, 150);
@@ -61,20 +65,26 @@ void GanttViewModel::onClockTicked(uint64_t tick) {
   emit totalTicksChanged();
 
   const auto* runningProcess = m_simulator->getRunningProcess();
-  int runningPid = runningProcess ? runningProcess->getPid() : -1;  // -1 for Idle
+  int runningPid = -1;  // Default to IDLE
+
+  if (runningProcess) {
+    runningPid = runningProcess->getPid();
+  } else if (m_simulator->isContextSwitching()) {
+    runningPid = -2;  // CS
+  }
 
   // If process changed, close current block and start new one
   if (runningPid != m_currentPid) {
     // Close previous block if it wasn't the initial state
-    if (m_currentPid != -1 || (m_blocks.empty() && tick > 0)) {
-      // If we had a running process (or idle), finish its block
-      // Note: If m_currentPid was -1 (Idle), we can choose to record it or not.
-      // Let's record Idle as PID 0 or -1 for gaps.
-
-      if (m_currentPid != -1) {  // Only record actual processes for now
-        beginInsertRows(QModelIndex(), m_blocks.size(), m_blocks.size());
-        m_blocks.push_back({m_currentPid, m_currentBlockStart, tick});
-        endInsertRows();
+    if (m_currentPid != -3 || (m_blocks.empty() && tick > 0)) { // -3 is initial uninitialized state
+      // If we had a running process (or idle/cs), finish its block
+      // Now we record EVERYTHING including IDLE (-1) and CS (-2)
+      
+      // Avoid adding block if duration is 0 (e.g. immediate switch)
+      if (tick > m_currentBlockStart) {
+          beginInsertRows(QModelIndex(), m_blocks.size(), m_blocks.size());
+          m_blocks.push_back({m_currentPid, m_currentBlockStart, tick});
+          endInsertRows();
       }
     }
 
@@ -87,7 +97,7 @@ void GanttViewModel::reset() {
   beginResetModel();
   m_blocks.clear();
   endResetModel();
-  m_currentPid = -1;
+  m_currentPid = -3; // Reset to uninitialized
   m_currentBlockStart = 0;
   m_totalTicks = 0;
   emit totalTicksChanged();

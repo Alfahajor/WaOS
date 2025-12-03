@@ -440,6 +440,8 @@ const uint64_t* Simulator::getClockRef() const { return m_clock.getTimeAddress()
 
 bool Simulator::isRunning() const { return m_isRunning; }
 
+bool Simulator::isContextSwitching() const { return m_contextSwitchCounter > 0; }
+
 void Simulator::updateMetrics() {
   m_metrics.currentTick = m_clock.getTime();
   m_metrics.totalProcesses = m_processes.size();

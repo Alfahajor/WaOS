@@ -59,28 +59,45 @@ Rectangle {
                     Rectangle {
                         width: dur * root.pixelPerTick
                         height: 40
-                        color: root.processColors[model.pid % root.processColors.length]
+                        color: model.color
                         radius: 4
-                        border.color: Qt.darker(color, 1.2)
+                        border.color: (model.pid === "IDLE" || model.pid === "CS") ? "transparent" : Qt.darker(color, 1.2)
                         border.width: 1
                         
                         Column {
                             anchors.centerIn: parent
                             Text {
-                                text: "P" + model.pid
+                                text: (model.pid === "IDLE" || model.pid === "CS") ? model.pid : "P" + model.pid
                                 font.bold: true
-                                color: "#11111b" // Crust/Mantle dark for contrast
+                                color: (model.pid === "IDLE" || model.pid === "CS") ? "#a6adc8" : "#11111b"
                                 font.pixelSize: 12
                                 anchors.horizontalCenter: parent.horizontalCenter
+                                visible: parent.parent.width > 20
                             }
                             Text {
                                 text: model.duration + "u"
                                 font.pixelSize: 10
                                 font.bold: true
-                                color: "#11111b"
+                                color: (model.pid === "IDLE" || model.pid === "CS") ? "#a6adc8" : "#11111b"
                                 opacity: 0.7
                                 anchors.horizontalCenter: parent.horizontalCenter
+                                visible: parent.parent.width > 30
                             }
+                        }
+
+                        ToolTip {
+                            visible: mouseArea.containsMouse
+                            text: {
+                                if (model.pid === "CS") return "Context Switch (Overhead)"
+                                if (model.pid === "IDLE") return "System Idle"
+                                return "Process: P" + model.pid + "\nDuration: " + model.duration + "u"
+                            }
+                        }
+                        
+                        MouseArea {
+                            id: mouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
                         }
                     }
 

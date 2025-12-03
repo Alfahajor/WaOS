@@ -90,6 +90,7 @@ class Simulator : public QObject {
   uint64_t getCurrentTime() const;
   const uint64_t* getClockRef() const;
   bool isRunning() const;
+  bool isContextSwitching() const;
 
  signals:
 
