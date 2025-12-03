@@ -154,7 +154,7 @@ void Simulator::tick(bool force) {
 
 void Simulator::step() {
   // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  std::cout << "[DEBUG] Simulator::step start" << std::endl;
+  // std::cout << "[DEBUG] Simulator::step start" << std::endl;
 
   uint64_t now = m_clock.getTime();
   emit clockTicked(now);

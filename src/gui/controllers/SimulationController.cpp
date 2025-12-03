@@ -33,7 +33,7 @@ SimulationController::SimulationController(QObject* parent)
   bool loaded = false;
   for (const QString& path : candidatePaths) {
     if (QFileInfo::exists(path)) {
-      qDebug() << "Loading processes from:" << path;
+      // qDebug() << "Loading processes from:" << path;
       if (m_simulator->loadProcesses(path.toStdString())) {
         loaded = true;
         break;
