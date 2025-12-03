@@ -48,6 +48,9 @@ bool Simulator::loadProcesses(const std::string& filePath) {
     m_totalPageFaults = 0;
     m_totalContextSwitches = 0;
 
+    // Reset Clock
+    m_clock.reset();
+
     // Convert ProcessInfo (DTO) to Process (Entity)
     for (const auto& info : processInfos) {
       auto process = std::make_unique<Process>(
