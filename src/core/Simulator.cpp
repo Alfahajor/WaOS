@@ -328,9 +328,9 @@ void Simulator::handleCpuExecution() {
     emit processStateChanged(m_runningProcess->getPid(), ProcessState::WAITING_MEMORY);
 
     m_memoryWaitQueue.push_back({m_runningProcess, m_pageFaultPenalty, pageRequired});
-    m_runningProcess = nullptr;  // Immediate yield on fault
-    m_needsContextSwitchOverhead = true; // Save context required
-    return;                      // Tick used for the faulting instruction attempt
+    m_runningProcess = nullptr;           // Immediate yield on fault
+    m_needsContextSwitchOverhead = true;  // Save context required
+    return;                               // Tick used for the faulting instruction attempt
   }
   // else: Page HIT - continue execution
 
@@ -367,14 +367,14 @@ void Simulator::handleCpuExecution() {
       m_memoryManager->freeForProcess(m_runningProcess->getPid());
 
       m_runningProcess = nullptr;
-      m_needsContextSwitchOverhead = false; // No context to save
+      m_needsContextSwitchOverhead = false;  // No context to save
     } else {
       if (m_runningProcess->getCurrentBurstType() == BurstType::IO) {
         m_runningProcess->setState(ProcessState::BLOCKED, m_clock.getTime());
         emit processStateChanged(m_runningProcess->getPid(), ProcessState::BLOCKED);
         m_blockedQueue.push_back(m_runningProcess);
         m_runningProcess = nullptr;
-        m_needsContextSwitchOverhead = true; // Save context required
+        m_needsContextSwitchOverhead = true;  // Save context required
       } else {
         // Sigue siendo CPU (caso raro de CPU consecutiva o retorno de interrupción)
         // For now, treat as yield to re-evaluate priorities/quantum
@@ -421,7 +421,7 @@ void Simulator::handleScheduling() {
     emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
     log(QString("Planificador seleccionó P%1. Iniciando inmediatamente.").arg(candidate->getPid()), LogCategory::SCHED);
   }
-  
+
   // Reset flag after handling
   m_needsContextSwitchOverhead = false;
 }
@@ -445,9 +445,9 @@ void Simulator::triggerContextSwitch(Process* current, Process* next) {
     m_nextProcess = next;
     m_contextSwitchCounter = m_contextSwitchDuration;
     // m_totalContextSwitches++; // Moved to handleScheduling/dispatch
-    
+
     // We are paying the price now, so no need for handleScheduling to pay it again
-    m_needsContextSwitchOverhead = false; 
+    m_needsContextSwitchOverhead = false;
   } else {
     // Immediate switch for non-preemptive cases
     if (next) {
@@ -458,7 +458,7 @@ void Simulator::triggerContextSwitch(Process* current, Process* next) {
     }
     // If next is null, handleScheduling will pick one immediately in step()
     m_contextSwitchCounter = 0;
-    m_needsContextSwitchOverhead = false; // Should be handled by caller (e.g. Terminated sets false)
+    m_needsContextSwitchOverhead = false;  // Should be handled by caller (e.g. Terminated sets false)
   }
 }
 
