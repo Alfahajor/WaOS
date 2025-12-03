@@ -3,80 +3,83 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Item {
-    // Theme Colors
-    property color textColor: "#cdd6f4"
-    property color bgCard: "#252535"
-    property color borderColor: "#313244"
-    property color bgSwimlane: "#1e1e2e"
+    // Theme Colors (WaOS Theme)
+    property color textColor: "#dfe6e9"
+    property color bgDark: "#121216"
+    property color bgTrack: "#252530" // Lighter background for tracks (Visible)
+    
+    // Specific Queue Colors
+    property color readyColor: "#f1c40f"   // Yellow/Gold
+    property color blockedColor: "#e74c3c" // Red
+    property color memoryColor: "#e67e22"  // Orange
+    
+    property color borderColor: "#2d3436"
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 10
+        anchors.margins: 10
+        spacing: 8 // Reduced spacing
 
-        // 1. Ready Queue (Swimlane)
+        // Divider at the top
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 60
-            color: bgCard
-            radius: 8
-            border.color: borderColor
+            Layout.preferredHeight: 1
+            color: borderColor
+            opacity: 0.5
+        }
+
+        // 1. Ready Queue
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 32 // Reduced height
+            spacing: 10
             
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 5
-                spacing: 10
+            Label {
+                Layout.preferredWidth: 80
+                text: "Ready Q."
+                font.bold: true
+                font.pixelSize: 13 // Larger font
+                color: "white" // User requested white for Ready Q section
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+            }
+            
+            // Queue Container (Track)
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: bgTrack // Visible lighter background
+                border.color: borderColor
+                border.width: 1
+                radius: 4
                 
-                // Label
-                Rectangle {
-                    Layout.fillHeight: true
-                    width: 80
-                    color: "transparent"
-                    Label { 
-                        anchors.centerIn: parent
-                        text: "Ready"
-                        font.bold: true
-                        color: "#89b4fa" // Blue
-                    }
-                }
-                
-                // Horizontal List
-                Flickable {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                ListView {
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    orientation: ListView.Horizontal
+                    spacing: 4 // Tighter spacing
                     clip: true
-                    contentWidth: readyRow.width
-                    contentHeight: height
+                    model: processViewModel.processList
                     
-                    Row {
-                        id: readyRow
-                        spacing: 5
+                    delegate: Item {
+                        visible: model.modelData.state === "Listo"
+                        width: visible ? height : 0 // Square aspect ratio (width = height)
                         height: parent.height
                         
-                        Repeater {
-                            model: processViewModel.processList
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: readyColor
+                            border.width: 1
+                            radius: 3
+                            visible: parent.visible
                             
-                            delegate: Item {
-                                visible: model.modelData.state === "Listo"
-                                width: visible ? 50 : 0
-                                height: parent.height
-                                
-                                Rectangle {
-                                    anchors.fill: parent
-                                    anchors.margins: 2
-                                    color: "#2a2a35"
-                                    radius: 4
-                                    border.color: "#f9e2af" // Yellow/Gold
-                                    border.width: 1
-                                    visible: parent.visible
-                                    
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: "P" + model.modelData.pid
-                                        color: textColor
-                                        font.bold: true
-                                        font.pixelSize: 12
-                                    }
-                                }
+                            Text {
+                                anchors.centerIn: parent
+                                text: "P" + model.modelData.pid
+                                color: "white" // White text inside box
+                                font.bold: true
+                                font.pixelSize: 11
                             }
                         }
                     }
@@ -84,108 +87,112 @@ Item {
             }
         }
 
-        // 2. Blocked (I/O) Queue (Swimlane)
-        Rectangle {
+        // 2. Blocked I/O Queue
+        RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 60
-            color: bgCard
-            radius: 8
-            border.color: borderColor
+            Layout.preferredHeight: 32
+            spacing: 10
             
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 5
-                spacing: 10
-                
-                Rectangle {
-                    Layout.fillHeight: true
-                    width: 80
-                    color: "transparent"
-                    Label { 
-                        anchors.centerIn: parent
-                        text: "Blocked"
-                        font.bold: true
-                        color: "#f38ba8" // Red
-                    }
-                }
+            Label {
+                Layout.preferredWidth: 80
+                text: "Blocked I/O"
+                font.bold: true
+                font.pixelSize: 13
+                color: blockedColor
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+            }
+            
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: bgTrack
+                border.color: borderColor
+                border.width: 1
+                radius: 4
                 
                 ListView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    anchors.fill: parent
+                    anchors.margins: 4
                     orientation: ListView.Horizontal
+                    spacing: 4
                     clip: true
-                    spacing: 5
                     model: blockingViewModel.ioBlockedList
                     
-                    delegate: Rectangle {
-                        width: 50
-                        height: parent.height - 4
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: "#2a2a35"
-                        radius: 4
-                        border.color: "#f38ba8" // Red
-                        border.width: 1
+                    delegate: Item {
+                        width: height // Square
+                        height: parent.height
                         
-                        Text {
-                            anchors.centerIn: parent
-                            text: "P" + model.modelData.pid
-                            color: "#f38ba8" // Red Text
-                            font.bold: true
-                            font.pixelSize: 12
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: blockedColor
+                            border.width: 1
+                            radius: 3
+                            
+                            Text {
+                                anchors.centerIn: parent
+                                text: "P" + model.modelData.pid
+                                color: "white"
+                                font.bold: true
+                                font.pixelSize: 11
+                            }
                         }
                     }
                 }
             }
         }
 
-        // 3. Waiting for Memory Queue (Swimlane)
-        Rectangle {
+        // 3. Wait Mem Queue
+        RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 60
-            color: bgCard
-            radius: 8
-            border.color: borderColor
+            Layout.preferredHeight: 32
+            spacing: 10
             
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 5
-                spacing: 10
-                
-                Rectangle {
-                    Layout.fillHeight: true
-                    width: 80
-                    color: "transparent"
-                    Label { 
-                        anchors.centerIn: parent
-                        text: "Memory"
-                        font.bold: true
-                        color: "#fab387" // Orange
-                    }
-                }
+            Label {
+                Layout.preferredWidth: 80
+                text: "Wait Mem"
+                font.bold: true
+                font.pixelSize: 13
+                color: memoryColor
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+            }
+            
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: bgTrack
+                border.color: borderColor
+                border.width: 1
+                radius: 4
                 
                 ListView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    anchors.fill: parent
+                    anchors.margins: 4
                     orientation: ListView.Horizontal
+                    spacing: 4
                     clip: true
-                    spacing: 5
                     model: blockingViewModel.memoryBlockedList
                     
-                    delegate: Rectangle {
-                        width: 50
-                        height: parent.height - 4
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: "#2a2a35"
-                        radius: 4
-                        border.color: "#fab387" // Orange
-                        border.width: 1
+                    delegate: Item {
+                        width: height // Square
+                        height: parent.height
                         
-                        Text {
-                            anchors.centerIn: parent
-                            text: "P" + model.modelData.pid
-                            color: textColor
-                            font.bold: true
-                            font.pixelSize: 12
+                        Rectangle {
+                            anchors.fill: parent
+                            color: "transparent"
+                            border.color: memoryColor
+                            border.width: 1
+                            radius: 3
+                            
+                            Text {
+                                anchors.centerIn: parent
+                                text: "P" + model.modelData.pid
+                                color: "white"
+                                font.bold: true
+                                font.pixelSize: 11
+                            }
                         }
                     }
                 }
@@ -195,3 +202,6 @@ Item {
         Item { Layout.fillHeight: true } // Spacer
     }
 }
+
+
+
