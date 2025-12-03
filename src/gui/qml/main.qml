@@ -166,13 +166,26 @@ ApplicationWindow {
 
                                 // Step
                                 Button {
+                                    id: stepButton
                                     icon.source: "qrc:/icons/step.svg"
                                     icon.color: enabled ? mainWindow.textColor : mainWindow.textMuted
                                     display: AbstractButton.IconOnly
-                                    background: Rectangle { color: "transparent" }
+                                    
+                                    background: Rectangle { 
+                                        radius: 4
+                                        color: stepButton.down ? mainWindow.accentColor : 
+                                               (stepButton.hovered ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
+                                        border.color: stepButton.down ? mainWindow.accentColor : "transparent"
+                                        border.width: 1
+                                        
+                                        Behavior on color { ColorAnimation { duration: 50 } }
+                                    }
+
                                     enabled: !simulationController.isRunning
                                     onClicked: simulationController.step()
-                                    ToolTip.visible: hovered; ToolTip.text: "Step"
+                                    
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: "Step: Execute 1 Tick"
                                 }
 
                                 // Play/Pause
