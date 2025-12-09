@@ -1,6 +1,7 @@
 #include "waos/core/Simulator.h"
 #include "waos/core/Process.h"
-#include "tests/core/CoreMocks.h"
+#include "waos/scheduler/FCFSScheduler.h"
+#include "waos/memory/FIFOMemoryManager.h"
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -10,14 +11,16 @@
 #include <algorithm>
 
 using namespace waos::core;
+using namespace waos::memory;
+using namespace waos::scheduler;
 
 void createProcessFile(const std::string& filename) {
   std::ofstream out(filename);
   // P1: Page Fault al inicio (Mem Dev), luego CPU, luego I/O (E/S Dev).
   // P2: Llega en t=2 para poblar Ready Queue.
-  out << "P1 0 CPU(3),E/S(3),CPU(2) 2 1\n"; 
-  out << "P2 2 CPU(4) 2 1\n";
-  out << "P3 6 CPU(2) 2 1\n";
+  out << "P1 0 CPU(5) 1 2\n";
+  out << "P2 2 CPU(3) 1 2\n";
+  out << "P3 5 CPU(4) 1 3\n";
   out.close();
 }
 
@@ -64,13 +67,8 @@ void run_trace_simulation() {
     return;
   }
 
-  // Usamos MockScheduler (FIFO) y MockMemory
-  auto sched = std::make_unique<MockScheduler>();
-  auto mem = std::make_unique<MockMemoryManager>();
-  
-  // everythingLoaded = false provoca PageFaults en el primer acceso de cada página.
-  // Esto permite visualizar la columna "Mem Dev".
-  mem->everythingLoaded = false; 
+  auto sched = std::make_unique<FCFSScheduler>();
+  auto mem = std::make_unique<FIFOMemoryManager>(10, sim.getClockRef());
 
   sim.setScheduler(std::move(sched));
   sim.setMemoryManager(std::move(mem));
