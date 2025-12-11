@@ -1,7 +1,6 @@
 /**
  * @brief Defines the main orchestration class for the OS simulation.
- * @version 0.4
- * @date 11-22-2025
+ * Refactored for deterministic tick execution.
  */
 
 #pragma once
@@ -21,41 +20,17 @@
 
 namespace waos::core {
 
-/**
- * @class Simulator
- * @brief The central engine of the operating system simulator.
- *
- * This class orchestrates the interaction between the Scheduler, Memory Manager,
- * and the simulation Clock. It manages the lifecycle of processes and exposes
- * signals to update the User Interface.
- */
 class Simulator : public QObject {
   Q_OBJECT
 
- public:
+public:
   explicit Simulator(QObject* parent = nullptr);
   ~Simulator() override;
 
-  /**
-   * @brief Loads processes from a configuration file using the Parser.
-   * @param filePath Path to the .txt file containing process definitions.
-   * @return True if loading was successful, false otherwise.
-   */
   bool loadProcesses(const std::string& filePath);
-
-  /**
-   * @brief Injects the specific scheduling algorithm to be used.
-   * @param scheduler Ownership of a concrete IScheduler implementation.
-   */
   void setScheduler(std::unique_ptr<waos::scheduler::IScheduler> scheduler);
-
-  /**
-   * @brief Injects the specific memory management strategy to be used.
-   * @param memoryManager Ownership of a concrete IMemoryManager implementation.
-   */
   void setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> memoryManager);
 
-  // Simulation
   void start();
   void stop();
   void reset();
@@ -73,15 +48,15 @@ class Simulator : public QObject {
   std::vector<waos::common::MemoryWaitInfo> getMemoryWaitQueue() const;
   std::vector<const Process*> getReadyProcesses() const;
 
+  // Component accessors
   waos::common::SimulatorMetrics getSimulatorMetrics() const;
+  const waos::scheduler::IScheduler* getScheduler() const;
+  const waos::memory::IMemoryManager* getMemoryManager() const;
+  
   std::string getSchedulerAlgorithmName() const;
   std::string getMemoryAlgorithmName() const;
 
-  // Accessors for sub-components (Read-Only)
-  const waos::scheduler::IScheduler* getScheduler() const;
-  const waos::memory::IMemoryManager* getMemoryManager() const;
-
-  // Memory Wrappers to prevent Deadlocks (SimulatorMutex -> MemoryMutex order)
+  // Memory specific getters
   std::vector<waos::common::FrameInfo> getFrameStatus() const;
   std::vector<waos::common::PageTableEntryInfo> getPageTableForProcess(int processId) const;
   waos::common::MemoryStats getMemoryStats() const;
@@ -92,60 +67,24 @@ class Simulator : public QObject {
   bool isRunning() const;
   bool isContextSwitching() const;
 
- signals:
-
-  /**
-   * @brief Emitted when the global simulation clock ticks.
-   * @param currentTime The new time value.
-   */
+signals:
   void clockTicked(uint64_t currentTime);
-
-  /**
-   * @brief Emitted when a process changes its state
-   * @param pid Process Identifier.
-   * @param newState The new state of the process.
-   */
   void processStateChanged(int pid, ProcessState newState);
-
-  /**
-   * @brief Emitted when the simulation finishes (all processes terminated).
-   */
   void simulationFinished();
-
-  /**
-   * @brief Emitted to log messages to the UI console.
-   * @param message The log string.
-   */
   void logMessage(QString message);
 
- public:
-  enum class LogCategory { SYS,
-                           MEM,
-                           WAIT,
-                           NOTIFY,
-                           SCHED,
-                           PROC };
+public:
+  enum class LogCategory { SYS, MEM, WAIT, NOTIFY, SCHED, PROC };
 
- private:
-  void log(const QString& message, LogCategory category = LogCategory::SYS);
-
- private:
+private:
   Clock m_clock;
   std::unique_ptr<waos::scheduler::IScheduler> m_scheduler;
   std::unique_ptr<waos::memory::IMemoryManager> m_memoryManager;
-
   SystemMonitor m_systemMonitor;
 
-  // The Simulator owns all processes.
   std::vector<std::unique_ptr<Process>> m_processes;
-
-  // Separate container for processes that haven't arrived yet (Waiting to arrive)
   std::vector<Process*> m_incomingProcesses;
-
-  // Queue for processes blocked by I/O (The simulator manages I/O waits)
-  std::vector<Process*> m_blockedQueue;
-
-  // Processes waiting for the disk to load a page
+  std::list<Process*> m_blockedQueue;
   struct InternalMemoryWait {
     Process* process;
     int ticksRemaining;
@@ -153,44 +92,44 @@ class Simulator : public QObject {
   };
   std::list<InternalMemoryWait> m_memoryWaitQueue;
 
-  // Process currently in CPU
+  // Kernel states
   Process* m_runningProcess;
+  Process* m_nextProcess; // Proceso seleccionado para entrar tras el CS
 
-  // Context Switch Handling
-  Process* m_nextProcess;
-  int m_contextSwitchCounter;  // Ticks remaining for CS
+  int m_contextSwitchCounter; 
+  const int m_contextSwitchDuration = 1;
+  bool m_isKernelBusy;
 
-  // Global Accumulators for Metrics
+  // Metrics
   uint64_t m_cpuActiveTicks;
   int m_totalPageFaults;
   int m_totalContextSwitches;
   waos::common::SimulatorMetrics m_metrics;
+  const int m_pageFaultPenalty = 5;
 
   bool m_isRunning;
-  mutable std::recursive_mutex m_simulationMutex;  // Recursive to allow signal-slot re-entry
+  mutable std::recursive_mutex m_simulationMutex;
 
-  int m_pageFaultPenalty;
-  int m_contextSwitchDuration;
-  bool m_needsContextSwitchOverhead;  // Flag to determine if CS overhead is needed
-
-  // The main logic step executed every tick.
+  // Core logical
   void step();
 
-  // Helpers to simulation
-  void handleArrivals();
-  void handleIO();
-  void handlePageFaults();
-  void handleCpuExecution();
-  void handleScheduling();
+  // Tick phases (Return true if a higher priority process became READY)
+  bool handleArrivals();
+  bool handleIO();
+  bool handleMemoryOps();
 
-  // Helper to initiate context switch
-  void triggerContextSwitch(Process* current, Process* next);
+  // Kernel management
+  void executeKernelCycle();
+  void executeUserCycle();
+  
+  // Context Transitions 
+  void triggerContextSwitch(Process* current, ProcessState nextState, Process* next = nullptr);
+  void completeContextSwitch();
 
-  // Internal helper to refresh metric struct
+  // Checks
+  bool checkPreemption();
   void updateMetrics();
-
-  // Returns true if I/O burst finished in this step
-  bool processIoStep(Process* p);
+  void log(const QString& message, LogCategory category = LogCategory::SYS);
 };
 
-}  // namespace waos::core
+}

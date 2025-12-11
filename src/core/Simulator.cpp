@@ -1,11 +1,8 @@
 #include "waos/core/Simulator.h"
 
+#include <iostream>
 #include <waos/memory/IMemoryManager.h>
 #include <waos/scheduler/IScheduler.h>
-
-#include <algorithm>
-#include <iostream>
-
 #include "waos/common/DataStructures.h"
 #include "waos/core/Parser.h"
 
@@ -16,71 +13,35 @@ Simulator::Simulator(QObject* parent)
       m_runningProcess(nullptr),
       m_nextProcess(nullptr),
       m_contextSwitchCounter(0),
+      m_isKernelBusy(false),
       m_cpuActiveTicks(0),
       m_totalPageFaults(0),
       m_totalContextSwitches(0),
-      m_isRunning(false),
-      m_pageFaultPenalty(5),
-      m_contextSwitchDuration(1),
-      m_needsContextSwitchOverhead(false) {
+      m_isRunning(false) {
 }
 
-Simulator::~Simulator() {
-  // Ensure all threads are stopped on destruction
-  reset();
-}
+Simulator::~Simulator() { reset(); }
 
 bool Simulator::loadProcesses(const std::string& filePath) {
   try {
     auto processInfos = Parser::parseFile(filePath);
+    reset();
 
-    // Clear existing data
-    m_processes.clear();
-    m_incomingProcesses.clear();
-    m_blockedQueue.clear();
-    m_memoryWaitQueue.clear();
-    m_runningProcess = nullptr;
-    m_nextProcess = nullptr;
-    m_contextSwitchCounter = 0;
-
-    // Reset Metrics accumulators
-    m_cpuActiveTicks = 0;
-    m_totalPageFaults = 0;
-    m_totalContextSwitches = 0;
-
-    // Reset Clock
-    m_clock.reset();
-
-    // Convert ProcessInfo (DTO) to Process (Entity)
     for (const auto& info : processInfos) {
-      auto process = std::make_unique<Process>(
-          info.pid,
-          info.arrivalTime,
-          info.priority,
-          info.bursts,
-          info.requiredPages);
-
-      // Store raw pointer in incoming list for arrival checks
+      auto process = std::make_unique<Process>(info.pid, info.arrivalTime, info.priority, info.bursts, info.requiredPages);
       m_incomingProcesses.push_back(process.get());
-
-      // Move ownership to the main vector
       m_processes.push_back(std::move(process));
     }
-
-    // Sort incoming processes by arrival time for efficiency
+    // Ordenar por tiempo de llegada, luego PID
     std::sort(m_incomingProcesses.begin(), m_incomingProcesses.end(),
               [](Process* a, Process* b) {
-                if (a->getArrivalTime() != b->getArrivalTime()) {
-                  return a->getArrivalTime() < b->getArrivalTime();
-                }
-                return a->getPid() < b->getPid();
+                return (a->getArrivalTime() < b->getArrivalTime()) || 
+                       (a->getArrivalTime() == b->getArrivalTime() && a->getPid() < b->getPid());
               });
-
-    log(QString("Se cargaron %1 procesos desde el archivo.").arg(m_processes.size()), LogCategory::SYS);
+    log(QString("Cargados %1 procesos.").arg(m_processes.size()), LogCategory::SYS);
     return true;
-
   } catch (const std::exception& e) {
-    log(QString("Error al cargar procesos: %1").arg(e.what()), LogCategory::SYS);
+    log(QString("Error carga: %1").arg(e.what()), LogCategory::SYS);
     return false;
   }
 }
@@ -89,23 +50,15 @@ void Simulator::setScheduler(std::unique_ptr<waos::scheduler::IScheduler> schedu
   m_scheduler = std::move(scheduler);
 }
 
-void Simulator::setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> memoryManager) {
-  m_memoryManager = std::move(memoryManager);
+void Simulator::setMemoryManager(std::unique_ptr<waos::memory::IMemoryManager> manager) {
+  m_memoryManager = std::move(manager);
 }
 
 void Simulator::start() {
-  if (!m_scheduler || !m_memoryManager) {
-    log("Error: Planificador o Gestor de Memoria no inicializado.", LogCategory::SYS);
-    return;
+  if (m_scheduler && m_memoryManager && !m_processes.empty()) {
+    m_isRunning = true;
+    log("Simulación iniciada.", LogCategory::SYS);
   }
-
-  if (m_processes.empty()) {
-    log("Error: No hay procesos cargados.", LogCategory::SYS);
-    return;
-  }
-
-  m_isRunning = true;
-  log("Simulación iniciada.", LogCategory::SYS);
 }
 
 void Simulator::stop() {
@@ -115,412 +68,294 @@ void Simulator::stop() {
 
 void Simulator::reset() {
   stop();
-
-  for (auto& process : m_processes) {
-    if (process) {
-      process->stopThread();  // Joins the thread
-    }
-  }
-
+  for (auto& p : m_processes) p->stopThread();
+  
   m_runningProcess = nullptr;
   m_nextProcess = nullptr;
-  m_contextSwitchCounter = 0;
+  m_isKernelBusy = false;
   m_blockedQueue.clear();
   m_memoryWaitQueue.clear();
-
-  // Reset Metrics
+  m_processes.clear();
+  m_incomingProcesses.clear();
+  
   m_cpuActiveTicks = 0;
   m_totalPageFaults = 0;
   m_totalContextSwitches = 0;
   m_metrics = waos::common::SimulatorMetrics();
-  m_needsContextSwitchOverhead = false;
-
-  // Reset Memory Manager
-  if (m_memoryManager) {
-    m_memoryManager->reset();
-  }
-
-  // Reset Clock
+  
+  if (m_memoryManager) m_memoryManager->reset();
   m_clock.reset();
-
-  // Clear main container (Destructors will run, but threads are already joined)
-  m_processes.clear();
-  m_incomingProcesses.clear();
-
+  
   log("Simulación reiniciada.", LogCategory::SYS);
 }
 
 void Simulator::tick(bool force) {
   if (!m_isRunning && !force) return;
+  std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
   step();
 }
 
+// Master Orchestation Logic
 void Simulator::step() {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  // std::cout << "[DEBUG] Simulator::step start" << std::endl;
-
   uint64_t now = m_clock.getTime();
-  emit clockTicked(now);
+  bool potentialPreemption = false;
 
-  // IO Devices (Parallel to CPU)
-  handleIO();
+  // Estas funciones mueven procesos a READY, pero NO ejecutan CS aún.
+  potentialPreemption |= handleArrivals();
+  potentialPreemption |= handleIO();
+  potentialPreemption |= handleMemoryOps();
 
-  // Memory Disk Operations (Parallel to CPU)
-  handlePageFaults();
-
-  // Current running process executes its burst for this tick
-  if (m_contextSwitchCounter > 0) {
-    // Context Switch Overhead, CPU is busy doing kernel work
-    m_contextSwitchCounter--;
-    if (m_contextSwitchCounter == 0 && m_nextProcess) {
-      m_runningProcess = m_nextProcess;
-      m_nextProcess = nullptr;
-
-      m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-
-      emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-      log(QString("Cambio de contexto completado. Ejecutando P%1").arg(m_runningProcess->getPid()), LogCategory::SCHED);
+  // Si algo nuevo llegó y tiene más prioridad, forzamos CS antes de ejecutar nada.
+  if (!m_isKernelBusy && m_runningProcess != nullptr && potentialPreemption) {
+    if (checkPreemption()) {
+      // Al activar esto, m_isKernelBusy se vuelve true inmediatamente.
+      // El tick actual se consumirá en el "else if (m_isKernelBusy)" de abajo.
     }
-  } else {
-    // CPU is free for user process
-    handleCpuExecution();
   }
 
-  // Process Arrivals (May cause Preemption)
-  handleArrivals();
+  // Execution phase 
+  if (m_isKernelBusy) {
+    executeKernelCycle();
+  } else {
+    if (m_runningProcess == nullptr) {
+      Process* next = m_scheduler->getNextProcess();
+      if (next) {
+        m_runningProcess = next;
+        m_runningProcess->setState(ProcessState::RUNNING, now);
+        emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+        log(QString("CPU asignada a P%1").arg(m_runningProcess->getPid()), LogCategory::SCHED);
+      }
+    }
 
-  // Scheduling logic runs if CPU is free AND no switch is in progress.
-  if (m_runningProcess == nullptr && m_contextSwitchCounter == 0) handleScheduling();
+    if (m_runningProcess != nullptr) {
+      executeUserCycle();
+    }
+  }
 
   updateMetrics();
+  emit clockTicked(now);
   m_clock.tick();
-  // std::cout << "[DEBUG] Simulator::step end" << std::endl;
 }
 
-void Simulator::handleArrivals() {
+bool Simulator::handleArrivals() {
+  bool newReady = false;
   uint64_t now = m_clock.getTime();
+  
   auto it = m_incomingProcesses.begin();
-
   while (it != m_incomingProcesses.end()) {
     Process* p = *it;
     if (p->getArrivalTime() <= now) {
-      // Start the OS thread for this process
       p->startThread();
-
-      // Reserve structures
       m_memoryManager->allocateForProcess(p->getPid(), p->getRequiredPages());
       m_memoryManager->registerFutureReferences(p->getPid(), p->getPageReferenceString());
 
-      // Move to READY (Scheduler se encarga de la cola)
       p->setState(ProcessState::READY, now);
       emit processStateChanged(p->getPid(), ProcessState::READY);
       m_scheduler->addProcess(p);
-
-      // Preemption check
-      Process* current = (m_runningProcess) ? m_runningProcess : m_nextProcess;
-      if (current && p->getPriority() < current->getPriority()) {
-        // New process has higher priority (lower value)
-        log(QString("Apropiación: P%1 (Prio %2) desplaza a P%3 (Prio %4)")
-                .arg(p->getPid())
-                .arg(p->getPriority())
-                .arg(current->getPid())
-                .arg(current->getPriority()),
-            LogCategory::SCHED);
-
-        triggerContextSwitch(current, nullptr);  // Put current back to ready
-        // The scheduler will pick the new high-priority process in handleScheduling
-      }
-
+      
+      log(QString("Nuevo Proceso: P%1 (Prio %2)").arg(p->getPid()).arg(p->getPriority()), LogCategory::PROC);
+      
       it = m_incomingProcesses.erase(it);
-      log(QString("Proceso P%1 llegó.").arg(p->getPid()), LogCategory::PROC);
+      newReady = true;
     } else {
-      // Como están ordenados, si este no llegó, los siguientes tampoco.
-      break;
+      break; 
     }
   }
+  return newReady;
 }
 
-bool Simulator::processIoStep(Process* p) {
-  if (!p) return false;
-
-  // Thread is blocked. We manually decrement burst duration.
-  bool burstFinished = p->simulateIoWait(1);
-  p->addIoTime(1);
-
-  return burstFinished;
-}
-
-void Simulator::handleIO() {
-  // IO handling remains simulated in kernel space for simplicity
-  // and determinism, even with threaded processes. The thread is sleeping.
+bool Simulator::handleIO() {
+  bool newReady = false;
   auto it = m_blockedQueue.begin();
   if (it != m_blockedQueue.end()) {
     Process* p = *it;
-
-    // Thread is conceptually blocked. Kernel updates the PCB state.
-    // We manually decrement burst duration here because the thread is paused.
-    bool burstFinished = processIoStep(p);
-
-    if (burstFinished) {
+    bool done = p->simulateIoWait(1);
+    p->addIoTime(1);
+    
+    if (done) {
       p->advanceToNextBurst();
+      p->resetQuantum(); // New burst CPU, reset quantum
 
-      // Reset Quantum on I/O Completion (New scheduler eligibility)
-      p->resetQuantum();
-
-      // Back to READY
       p->setState(ProcessState::READY, m_clock.getTime());
       emit processStateChanged(p->getPid(), ProcessState::READY);
       m_scheduler->addProcess(p);
-
-      // Preemption on IO Completion could also happen here for Priority Scheduling
-      // We omit it for simplicity, but it follows the same logic as Arrivals.
-
+      
+      log(QString("P%1 terminó E/S").arg(p->getPid()), LogCategory::NOTIFY);
       it = m_blockedQueue.erase(it);
-      log(QString("Proceso P%1 terminó E/S.").arg(p->getPid()), LogCategory::NOTIFY);
+      newReady = true;
     }
   }
+  return newReady;
 }
 
-void Simulator::handlePageFaults() {
-  // Kernel simulates disk latency.
+bool Simulator::handleMemoryOps() {
+  bool newReady = false;
   auto it = m_memoryWaitQueue.begin();
   if (it != m_memoryWaitQueue.end()) {
-    InternalMemoryWait& info = *it;
-
-    // Simular tiempo de disco para cargar la página
-    info.ticksRemaining--;
-    if (info.process) info.process->addIoTime(1);  // Count disk wait as IO Time
-
-    if (info.ticksRemaining <= 0) {
-      // Notify to MemoryManager que la carga física is finished.
-      m_memoryManager->completePageLoad(info.process->getPid(), info.pageNumber);
-
-      // Reset Quantum on Fault Resolution
-      info.process->resetQuantum();
-
-      info.process->setState(ProcessState::READY, m_clock.getTime());
-      emit processStateChanged(info.process->getPid(), ProcessState::READY);
-      m_scheduler->addProcess(info.process);
-
-      log(QString("Proceso P%1 resolvió Fallo de Página.").arg(info.process->getPid()), LogCategory::MEM);
+    it->ticksRemaining--;
+    it->process->addIoTime(1);
+    
+    if (it->ticksRemaining <= 0) {
+      m_memoryManager->completePageLoad(it->process->getPid(), it->pageNumber);
+      it->process->resetQuantum(); // Reset quantum to back
+      
+      it->process->setState(ProcessState::READY, m_clock.getTime());
+      emit processStateChanged(it->process->getPid(), ProcessState::READY);
+      m_scheduler->addProcess(it->process);
+      
+      log(QString("P%1 página %2 cargada").arg(it->process->getPid()).arg(it->pageNumber), LogCategory::MEM);
       it = m_memoryWaitQueue.erase(it);
+      newReady = true;
     }
+  }
+  return newReady;
+}
+
+void Simulator::executeKernelCycle() {
+  m_cpuActiveTicks++;
+  m_contextSwitchCounter--;
+
+  if (m_contextSwitchCounter <= 0) {
+    completeContextSwitch();
   }
 }
 
-void Simulator::handleCpuExecution() {
-  if (!m_runningProcess) return;
-
-  // MMU Check (Hardware Instruction Fetch simulation)
-  int pageRequired = m_runningProcess->getCurrentPageRequirement();
-
-  // Request page - this counts hits AND faults
-  waos::memory::PageRequestResult result = m_memoryManager->requestPage(m_runningProcess->getPid(), pageRequired);
+void Simulator::executeUserCycle() {
+  // MMU Check (Antes de ejecutar)
+  int pageReq = m_runningProcess->getCurrentPageRequirement();
+  auto result = m_memoryManager->requestPage(m_runningProcess->getPid(), pageReq);
 
   if (result != waos::memory::PageRequestResult::HIT) {
-    // Page Fault Exception (either PAGE_FAULT or REPLACEMENT)
-    log(QString("Fallo de Página durante ejecución: P%1 necesita Página %2")
-            .arg(m_runningProcess->getPid())
-            .arg(pageRequired),
-        LogCategory::MEM);
-
+    log(QString("Fallo de Página: P%1 Pag %2").arg(m_runningProcess->getPid()).arg(pageReq), LogCategory::MEM);
     m_runningProcess->incrementPageFaults();
     m_totalPageFaults++;
-
-    m_runningProcess->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
-    emit processStateChanged(m_runningProcess->getPid(), ProcessState::WAITING_MEMORY);
-
-    m_memoryWaitQueue.push_back({m_runningProcess, m_pageFaultPenalty, pageRequired});
-    m_runningProcess = nullptr;           // Immediate yield on fault
-    m_needsContextSwitchOverhead = true;  // Save context required
-    return;                               // Tick used for the faulting instruction attempt
+    
+    m_memoryWaitQueue.push_back({m_runningProcess, m_pageFaultPenalty, pageReq});
+    
+    // Start Switch Out inmediately
+    triggerContextSwitch(m_runningProcess, ProcessState::WAITING_MEMORY);
+    return;
   }
-  // else: Page HIT - continue execution
 
-  // ORCHESTRATION: Wake up the thread
+  int durationBefore = m_runningProcess->getCurrentBurstDuration();
+
+  // Normal execution
   m_systemMonitor.dispatch(m_runningProcess);
-
-  // BARRIER: Wait for the thread to finish its tick logic
   m_systemMonitor.waitForBurstCompletion(m_runningProcess);
 
-  // If we reached here, the process successfully executed one tick of CPU burst.
-  m_cpuActiveTicks++;
-
-  // Post-Execution Kernel Accounting
+  int durationAfter = m_runningProcess->getCurrentBurstDuration();
+  
   m_runningProcess->addCpuTime(1);
   m_runningProcess->incrementQuantum(1);
-
-  // Advance instruction pointer in memory manager (for optimal algorithm)
   m_memoryManager->advanceInstructionPointer(m_runningProcess->getPid());
+  m_cpuActiveTicks++;
 
-  // Check Burst Completion (Thread updated the queue)
-  // We check the result of the thread's work.
-  int remaining = m_runningProcess->getCurrentBurstDuration();
+  std::cout << "[DEBUG] P" << m_runningProcess->getPid() 
+            << " burst: " << durationBefore << " -> " << durationAfter << std::endl;
 
-  if (remaining == 0) {
+  // Post-Execution checks
+  if (m_runningProcess->getCurrentBurstDuration() == 0) {
     m_runningProcess->advanceToNextBurst();
 
     if (!m_runningProcess->hasMoreBursts()) {
-      m_runningProcess->setState(ProcessState::TERMINATED, m_clock.getTime());
-      emit processStateChanged(m_runningProcess->getPid(), ProcessState::TERMINATED);
-      log(QString("Proceso P%1 Terminado.").arg(m_runningProcess->getPid()), LogCategory::PROC);
-
-      // Thread cleanup
-      m_runningProcess->stopThread();
+      log(QString("P%1 Terminado").arg(m_runningProcess->getPid()), LogCategory::PROC);
       m_memoryManager->freeForProcess(m_runningProcess->getPid());
 
+      m_runningProcess->setState(ProcessState::TERMINATED, m_clock.getTime());
+      emit processStateChanged(m_runningProcess->getPid(), ProcessState::TERMINATED);
       m_runningProcess = nullptr;
-      m_needsContextSwitchOverhead = false;  // No context to save
+    } else if (m_runningProcess->getCurrentBurstType() == BurstType::IO) {
+      log(QString("P%1 solicita E/S").arg(m_runningProcess->getPid()), LogCategory::SYS);
+      m_blockedQueue.push_back(m_runningProcess);
+      triggerContextSwitch(m_runningProcess, ProcessState::BLOCKED);
     } else {
-      if (m_runningProcess->getCurrentBurstType() == BurstType::IO) {
-        m_runningProcess->setState(ProcessState::BLOCKED, m_clock.getTime());
-        emit processStateChanged(m_runningProcess->getPid(), ProcessState::BLOCKED);
-        m_blockedQueue.push_back(m_runningProcess);
-        m_runningProcess = nullptr;
-        m_needsContextSwitchOverhead = false;  // Save context required
-      } else {
-        // Sigue siendo CPU (caso raro de CPU consecutiva o retorno de interrupción)
-        // For now, treat as yield to re-evaluate priorities/quantum
-        triggerContextSwitch(m_runningProcess, nullptr);
-      }
+      // Burst CPU seguido de otro Burst CPU (raro, pero yield)
+      triggerContextSwitch(m_runningProcess, ProcessState::READY);
     }
   } else {
-    // Burst not finished, check Quantum (Preemption)
+    // Check Quantum
     int timeSlice = m_scheduler->getTimeSlice();
-
-    // Only apply quantum if scheduler uses time-slicing (timeSlice > 0)
     if (timeSlice > 0 && m_runningProcess->getQuantumUsed() >= timeSlice) {
-      log(QString("Quantum expirado para P%1").arg(m_runningProcess->getPid()), LogCategory::SCHED);
+      log(QString("Quantum expirado P%1").arg(m_runningProcess->getPid()), LogCategory::SCHED);
       m_runningProcess->incrementPreemptions();
-      triggerContextSwitch(m_runningProcess, nullptr);
+      triggerContextSwitch(m_runningProcess, ProcessState::READY);
     }
   }
 }
 
-void Simulator::handleScheduling() {
-  if (!m_scheduler->hasReadyProcesses()) return;
-  Process* candidate = m_scheduler->getNextProcess();
-
-  if (!candidate) {
-    log("Advertencia: El planificador devolvió nulo a pesar de reportar procesos listos.", LogCategory::SYS);
-    return;
-  }
-
-  int pageRequired = candidate->getCurrentPageRequirement();
-  waos::memory::PageRequestResult result = m_memoryManager->requestPage(candidate->getPid(), pageRequired);
-
-  if (result != waos::memory::PageRequestResult::HIT) {
-    log(QString("Fallo de Página al intentar iniciar P%1 (Página %2). Iniciando CS.")
-          .arg(candidate->getPid())
-          .arg(pageRequired),
-      LogCategory::MEM);
-
-    candidate->incrementPageFaults();
-    m_totalPageFaults++;
-
-    // El proceso pasa a esperar memoria
-    candidate->setState(ProcessState::WAITING_MEMORY, m_clock.getTime());
-    emit processStateChanged(candidate->getPid(), ProcessState::WAITING_MEMORY);
-    m_memoryWaitQueue.push_back({candidate, m_pageFaultPenalty, pageRequired});
-
-    // Regla: Se produce un cambio de contexto en ese mismo instante.
-    // No hay runningProcess. Activamos el contador de CS para simular la gestión del fallo.
-    m_contextSwitchCounter = m_contextSwitchDuration; 
-    m_totalContextSwitches++; // Contamos el CS asociado al fallo
-    
-    // No asignamos m_runningProcess, por lo que el siguiente tick consumirá CS
-    return;
-  }
-
-  // Only apply overhead if we need to save previous state (m_needsContextSwitchOverhead)
-  if (m_contextSwitchDuration > 0 && m_needsContextSwitchOverhead) {
-    m_nextProcess = candidate;
-    m_contextSwitchCounter = m_contextSwitchDuration;
-    m_totalContextSwitches++;
-    log(QString("Planificador seleccionó P%1. Iniciando cambio de contexto (%2 ticks).")
-            .arg(candidate->getPid())
-            .arg(m_contextSwitchDuration),
-        LogCategory::SCHED);
-  } else {
-    // Immediate switch (First process, or previous terminated)
-    m_runningProcess = candidate;
-    m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-    m_totalContextSwitches++;
-    emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
-    log(QString("Planificador seleccionó P%1. Iniciando inmediatamente.").arg(candidate->getPid()), LogCategory::SCHED);
-  }
-
-  // Reset flag after handling
-  m_needsContextSwitchOverhead = false;
-}
-
-void Simulator::triggerContextSwitch(Process* current, Process* next) {
-  bool isPreemption = (current != nullptr && current->getState() != ProcessState::TERMINATED);
-
+void Simulator::triggerContextSwitch(Process* current, ProcessState nextState, Process* next) {
+  // Configurar estado de salida del proceso actual
   if (current) {
-    // Reset Quantum on Preemption/Yield (Returning to Ready)
-    current->resetQuantum();
-
-    current->setState(ProcessState::READY, m_clock.getTime());
-    emit processStateChanged(current->getPid(), ProcessState::READY);
-    m_scheduler->addProcess(current);
-  }
-  m_runningProcess = nullptr;
-
-  // If we have a specific next process (direct switch), set it up
-  // Otherwise, set running to null so handleScheduling picks one
-  if (isPreemption) {
-    m_nextProcess = next;
-    m_contextSwitchCounter = m_contextSwitchDuration;
-    // m_totalContextSwitches++; // Moved to handleScheduling/dispatch
-
-    // We are paying the price now, so no need for handleScheduling to pay it again
-    m_needsContextSwitchOverhead = false;
-  } else {
-    // Immediate switch for non-preemptive cases
-    if (next) {
-      m_runningProcess = next;
-      m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
-      m_totalContextSwitches++;
-      emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+    current->setState(nextState, m_clock.getTime());
+    emit processStateChanged(current->getPid(), nextState);
+    if (nextState == ProcessState::READY) {
+      current->resetQuantum();
+      m_scheduler->addProcess(current);
     }
-    // If next is null, handleScheduling will pick one immediately in step()
-    m_contextSwitchCounter = 0;
-    m_needsContextSwitchOverhead = false;  // Should be handled by caller (e.g. Terminated sets false)
+  }
+
+  // Preparar Kernel para switch
+  m_runningProcess = nullptr;
+  m_nextProcess = next;       // Puede ser null, el kernel decidirá al terminar el switch
+  m_isKernelBusy = true;
+  m_contextSwitchCounter = m_contextSwitchDuration;
+  m_totalContextSwitches++;
+}
+
+void Simulator::completeContextSwitch() {
+  m_isKernelBusy = false;
+
+  // Si no habíamos pre-seleccionado un proceso, preguntar al scheduler ahora
+  if (!m_nextProcess) {
+    m_nextProcess = m_scheduler->getNextProcess();
+  }
+
+  if (m_nextProcess) {
+    m_runningProcess = m_nextProcess;
+    m_nextProcess = nullptr;
+
+    m_runningProcess->setState(ProcessState::RUNNING, m_clock.getTime());
+    emit processStateChanged(m_runningProcess->getPid(), ProcessState::RUNNING);
+    log(QString("CPU asignada a P%1").arg(m_runningProcess->getPid()), LogCategory::SCHED);
+  } else {
+    // Scheduler vacío, CPU queda IDLE
   }
 }
 
-uint64_t Simulator::getCurrentTime() const { return m_clock.getTime(); }
+bool Simulator::checkPreemption() {
+  if (!m_runningProcess) return false;
+  
+  auto readyQueue = m_scheduler->peekReadyQueue();
+  if (readyQueue.empty()) return false;
 
-const uint64_t* Simulator::getClockRef() const { return m_clock.getTimeAddress(); }
-
-bool Simulator::isRunning() const { return m_isRunning; }
-
-bool Simulator::isContextSwitching() const { return m_contextSwitchCounter > 0; }
+  const Process* candidate = readyQueue.front(); // Asume cola ordenada
+  if (candidate->getPriority() < m_runningProcess->getPriority()) {
+    log(QString("Preempción: P%1 desplaza a P%2").arg(candidate->getPid()).arg(m_runningProcess->getPid()), LogCategory::SCHED);
+    m_runningProcess->incrementPreemptions();
+    triggerContextSwitch(m_runningProcess, ProcessState::READY);
+    return true;
+  }
+  return false;
+}
 
 void Simulator::updateMetrics() {
   m_metrics.currentTick = m_clock.getTime();
   m_metrics.totalProcesses = m_processes.size();
-
   m_metrics.totalPageFaults = m_totalPageFaults;
   m_metrics.totalContextSwitches = m_totalContextSwitches;
 
-  // Calculate CPU Utilization
   if (m_metrics.currentTick > 0) {
     m_metrics.cpuUtilization = (double)m_cpuActiveTicks / m_metrics.currentTick * 100.0;
-  } else {
-    m_metrics.cpuUtilization = 0.0;
   }
 
-  // Process-specific stats still require iteration, but simpler logic
   m_metrics.completedProcesses = 0;
   double totalWait = 0;
   double totalTurnaround = 0;
 
   for (const auto& p : m_processes) {
     if (p->getState() == ProcessState::TERMINATED) {
-      auto stats = p->getStats();
       m_metrics.completedProcesses++;
+      auto stats = p->getStats();
       totalWait += stats.totalWaitTime;
       totalTurnaround += (stats.finishTime - p->getArrivalTime());
     }
@@ -529,58 +364,44 @@ void Simulator::updateMetrics() {
   if (m_metrics.completedProcesses > 0) {
     m_metrics.avgWaitTime = totalWait / m_metrics.completedProcesses;
     m_metrics.avgTurnaroundTime = totalTurnaround / m_metrics.completedProcesses;
-  } else {
-    m_metrics.avgWaitTime = 0.0;
-    m_metrics.avgTurnaroundTime = 0.0;
   }
 
-  // Check for simulation completion
-  if (m_isRunning && m_metrics.completedProcesses == m_metrics.totalProcesses && m_metrics.totalProcesses > 0) {
+  if (m_isRunning && m_metrics.completedProcesses == m_processes.size() && !m_processes.empty()) {
     stop();
     emit simulationFinished();
-    log("Todos los procesos han terminado. Simulación finalizada.", LogCategory::SYS);
+    log("Todos los procesos terminados.", LogCategory::SYS);
   }
 }
 
-// APIs to GUI
+// Implementación de Getters
 std::vector<const Process*> Simulator::getAllProcesses() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  std::vector<const Process*> result;
-  for (const auto& p : m_processes) result.push_back(p.get());
-  return result;
+  std::vector<const Process*> v;
+  for(auto& p : m_processes) v.push_back(p.get());
+  return v;
 }
 
-const Process* Simulator::getRunningProcess() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  return m_runningProcess;
-}
+const Process* Simulator::getRunningProcess() const { return m_runningProcess; }
 
 std::vector<const Process*> Simulator::getBlockedProcesses() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  std::vector<const Process*> result;
-  for (const auto* p : m_blockedQueue) result.push_back(p);
-  return result;
+  std::vector<const Process*> v;
+  for(auto* p : m_blockedQueue) v.push_back(p);
+  return v;
 }
 
 std::vector<waos::common::MemoryWaitInfo> Simulator::getMemoryWaitQueue() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  std::vector<waos::common::MemoryWaitInfo> result;
-  for (const auto& item : m_memoryWaitQueue) {
-    result.push_back({item.process->getPid(), item.pageNumber, item.ticksRemaining});
-  }
-  return result;
+  std::vector<waos::common::MemoryWaitInfo> v;
+  for(auto& i : m_memoryWaitQueue) v.push_back({i.process->getPid(), i.pageNumber, i.ticksRemaining});
+  return v;
 }
 
 std::vector<const Process*> Simulator::getReadyProcesses() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  if (m_scheduler) return m_scheduler->peekReadyQueue();
+  if(m_scheduler) return m_scheduler->peekReadyQueue();
   return {};
 }
 
-waos::common::SimulatorMetrics Simulator::getSimulatorMetrics() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  return m_metrics;
-}
+waos::common::SimulatorMetrics Simulator::getSimulatorMetrics() const { return m_metrics; }
+const waos::scheduler::IScheduler* Simulator::getScheduler() const { return m_scheduler.get(); }
+const waos::memory::IMemoryManager* Simulator::getMemoryManager() const { return m_memoryManager.get(); }
 
 std::string Simulator::getSchedulerAlgorithmName() const {
   if (m_scheduler) return m_scheduler->getAlgorithmName();
@@ -592,75 +413,41 @@ std::string Simulator::getMemoryAlgorithmName() const {
   return "None";
 }
 
-const waos::scheduler::IScheduler* Simulator::getScheduler() const {
-  return m_scheduler.get();
-}
-
-const waos::memory::IMemoryManager* Simulator::getMemoryManager() const {
-  return m_memoryManager.get();
-}
-
+// Memory wrappers
 std::vector<waos::common::FrameInfo> Simulator::getFrameStatus() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  if (m_memoryManager) return m_memoryManager->getFrameStatus();
-  return {};
+  if(m_memoryManager) return m_memoryManager->getFrameStatus(); return {}; 
 }
-
-std::vector<waos::common::PageTableEntryInfo> Simulator::getPageTableForProcess(int processId) const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  if (m_memoryManager) return m_memoryManager->getPageTableForProcess(processId);
-  return {};
+std::vector<waos::common::PageTableEntryInfo> Simulator::getPageTableForProcess(int pid) const {
+  if(m_memoryManager) return m_memoryManager->getPageTableForProcess(pid); return {};
 }
-
 waos::common::MemoryStats Simulator::getMemoryStats() const {
-  // std::lock_guard<std::recursive_mutex> lock(m_simulationMutex);
-  if (m_memoryManager) return m_memoryManager->getMemoryStats();
-  return {};
+  if(m_memoryManager) return m_memoryManager->getMemoryStats(); return {};
 }
 
+// Log helper
 void Simulator::log(const QString& message, LogCategory category) {
   uint64_t time = m_clock.getTime();
-  QString timeStr = QString("%1:%2")
-                        .arg(time / 60, 2, 10, QChar('0'))
-                        .arg(time % 60, 2, 10, QChar('0'));
-
-  QString catStr;
-  QString color;
-
+  QString timeStr = QString("%1:%2").arg(time / 60, 2, 10, QChar('0')).arg(time % 60, 2, 10, QChar('0'));
+  
+  QString color = "#a6e3a1"; // SYS default
+  QString catStr = "SYS";
   switch (category) {
-    case LogCategory::SYS:
-      catStr = "SYS";
-      color = "#a6e3a1";  // Green
-      break;
-    case LogCategory::MEM:
-      catStr = "MEM";
-      color = "#89b4fa";  // Blue
-      break;
-    case LogCategory::WAIT:
-      catStr = "WAIT";
-      color = "#fab387";  // Orange
-      break;
-    case LogCategory::NOTIFY:
-      catStr = "NOTIFY";
-      color = "#f9e2af";  // Yellow
-      break;
-    case LogCategory::SCHED:
-      catStr = "SCHED";
-      color = "#cba6f7";  // Purple
-      break;
-    case LogCategory::PROC:
-      catStr = "PROC";
-      color = "#f5c2e7";  // Pink
-      break;
+    case LogCategory::MEM: catStr = "MEM"; color = "#89b4fa"; break;
+    case LogCategory::WAIT: catStr = "WAIT"; color = "#fab387"; break;
+    case LogCategory::NOTIFY: catStr = "NOTIFY"; color = "#f9e2af"; break;
+    case LogCategory::SCHED: catStr = "SCHED"; color = "#cba6f7"; break;
+    case LogCategory::PROC: catStr = "PROC"; color = "#f5c2e7"; break;
+    default: break;
   }
-
-  QString formattedMessage = QString("<font color='#7f849c'>%1</font> &nbsp; <b><font color='%2'>%3:</font></b> %4")
-                                 .arg(timeStr)
-                                 .arg(color)
-                                 .arg(catStr)
-                                 .arg(message);
-
-  emit logMessage(formattedMessage);
+  
+  emit logMessage(QString("<font color='#7f849c'>%1</font> <b><font color='%2'>%3:</font></b> %4")
+                  .arg(timeStr, color, catStr, message));
 }
 
-}  // namespace waos::core
+// Getters técnicos para tests
+uint64_t Simulator::getCurrentTime() const { return m_clock.getTime(); }
+const uint64_t* Simulator::getClockRef() const { return m_clock.getTimeAddress(); }
+bool Simulator::isRunning() const { return m_isRunning; }
+bool Simulator::isContextSwitching() const { return m_isKernelBusy; }
+
+}
