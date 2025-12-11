@@ -2,6 +2,7 @@
 #include "waos/core/Process.h"
 #include "waos/scheduler/FCFSScheduler.h"
 #include "waos/memory/FIFOMemoryManager.h"
+
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -16,8 +17,6 @@ using namespace waos::scheduler;
 
 void createProcessFile(const std::string& filename) {
   std::ofstream out(filename);
-  // P1: Page Fault al inicio (Mem Dev), luego CPU, luego I/O (E/S Dev).
-  // P2: Llega en t=2 para poblar Ready Queue.
   out << "P1 0 CPU(5) 1 2\n";
   out << "P2 2 CPU(3) 1 2\n";
   out << "P3 5 CPU(4) 1 3\n";
@@ -101,32 +100,32 @@ void run_trace_simulation() {
 
   // Simulation Loop
   while (sim.isRunning()) {
-    // Capturar estado actual (Snapshot del inicio del tick)
+    // Capturar tiempo ANTES de ejecutar el tick
     uint64_t t = sim.getCurrentTime();
-    
-    // Avanzar simulación
+
+    // Ejecutar el tick (modifica el estado para el siguiente ciclo)
     sim.tick();
 
+    // Capturar estado ANTES de ejecutar el tick
     const Process* cpuProc = sim.getRunningProcess();
     auto readyQueue = sim.getReadyProcesses();
-    auto ioDevs = sim.getBlockedProcesses(); // En este simulador, Blocked = IO Active
-    auto memDevs = sim.getMemoryWaitQueue(); // En este simulador, WaitMem = Disk Active
+    auto ioDevs = sim.getBlockedProcesses();
+    auto memDevs = sim.getMemoryWaitQueue();
+    bool isCS = sim.isContextSwitching();
 
-    // Lógica de visualización CPU
+    // Formatear visualización basada en estado real del kernel
     std::string cpuStr = "-";
-    if (cpuProc) {
+    if (isCS) {
+      cpuStr = "C.S";
+    } else if (cpuProc) {
       cpuStr = formatProcess(cpuProc);
-    } else {
-      // Si no hay CPU, pero hay listos, es Context Switch (C.S)
-      // Nota: Con las correcciones recientes (Fix P1), esto solo se verá en Preempción.
-      if (!readyQueue.empty()) cpuStr = "C.S";
     }
 
     std::string readyStr = formatQueue(readyQueue);
     std::string ioDevStr = formatQueue(ioDevs);
     std::string memDevStr = formatWaitQueue(memDevs);
 
-    // Imprimir Fila
+    // Imprimir estado del tick t (ANTES de ejecutarlo)
     std::cout << std::left 
               << std::setw(w_t) << t << " | "
               << std::setw(w_cpu) << cpuStr << " | "
